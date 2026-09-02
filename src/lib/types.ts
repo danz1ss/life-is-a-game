@@ -33,7 +33,23 @@ export interface Quest {
   repeatDays: number[]
   isMain: boolean
   completedDates: string[]
+  archivedAt: string | null
   createdAt: string
+}
+
+export type GoalStatus = 'active' | 'paused' | 'completed'
+
+export interface SkillGoal {
+  id: string
+  skillId: string
+  title: string
+  purpose: string
+  successCriteria: string
+  targetDate: string | null
+  progress: number
+  status: GoalStatus
+  createdAt: string
+  completedAt: string | null
 }
 
 export interface Reward {
@@ -47,22 +63,24 @@ export interface Reward {
 
 export interface HistoryEvent {
   id: string
-  type: 'quest' | 'reward'
+  type: 'quest' | 'reward' | 'goal'
   date: string
   createdAt: string
   title: string
   questId?: string
   rewardId?: string
+  goalId?: string
   skillId?: string | null
   xp: number
   gold: number
 }
 
 export interface AppState {
-  version: 1
+  version: 2
   profile: Profile
   skills: Skill[]
   quests: Quest[]
+  goals: SkillGoal[]
   rewards: Reward[]
   history: HistoryEvent[]
   preferences: {
@@ -70,8 +88,9 @@ export interface AppState {
   }
 }
 
-export type QuestDraft = Omit<Quest, 'id' | 'createdAt' | 'completedDates'>
+export type QuestDraft = Omit<Quest, 'id' | 'createdAt' | 'completedDates' | 'archivedAt'>
 export type SkillDraft = Omit<Skill, 'id' | 'createdAt' | 'xp' | 'position'> & {
   position?: { x: number; y: number }
 }
 export type RewardDraft = Omit<Reward, 'id' | 'createdAt'>
+export type SkillGoalDraft = Omit<SkillGoal, 'id' | 'createdAt' | 'completedAt' | 'status'>

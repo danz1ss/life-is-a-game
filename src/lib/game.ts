@@ -1,4 +1,6 @@
-import type { AppState, Difficulty, Quest, Skill } from './types'
+import type { AppState, Difficulty, Quest, Skill, SkillGoal } from './types'
+
+export const goalCompletionReward = { xp: 150, gold: 30 }
 
 export const difficultyConfig: Record<Difficulty, { label: string; xp: number; gold: number; tone: string }> = {
   easy: { label: 'Простой', xp: 10, gold: 2, tone: 'mint' },
@@ -57,14 +59,26 @@ export function skillLevel(skill: Skill) {
 }
 
 export function isQuestForDate(quest: Quest, value: string) {
+  if (quest.archivedAt) return false
   const date = new Date(`${value}T12:00:00`)
   if (quest.repeatDays.length > 0) return quest.repeatDays.includes(date.getDay())
   if (quest.dueDate) return quest.dueDate === value
-  return true
+  return false
 }
 
 export function isQuestComplete(quest: Quest, value: string) {
   return quest.repeatDays.length > 0 ? quest.completedDates.includes(value) : quest.completedDates.length > 0
+}
+
+export function isQuestOverdue(quest: Quest, today = dateKey()) {
+  return !quest.archivedAt
+    && quest.repeatDays.length === 0
+    && quest.completedDates.length === 0
+    && Boolean(quest.dueDate && quest.dueDate < today)
+}
+
+export function activeGoalForSkill(goals: SkillGoal[], skillId: string) {
+  return goals.find((goal) => goal.skillId === skillId && goal.status !== 'completed') ?? null
 }
 
 export function formatDuration(minutes: number) {
@@ -102,7 +116,7 @@ export function createInitialState(): AppState {
   const today = dateKey()
   const now = new Date().toISOString()
   return {
-    version: 1,
+    version: 2,
     profile: {
       name: 'Игрок',
       avatar: '⚔️',
@@ -121,10 +135,11 @@ export function createInitialState(): AppState {
       { id: 'programming', name: 'Программирование', description: 'Создание приложений и систем', icon: '</>', color: '#ffb45e', parentId: 'career', xp: 0, position: { x: 290, y: 380 }, requiredParentLevel: 1, createdAt: now },
     ],
     quests: [
-      { id: 'quest-project', title: 'Поработать над главным проектом', description: 'Сделать один конкретный шаг, который двигает проект вперёд.', difficulty: 'hard', skillId: 'programming', dueDate: today, scheduledTime: '10:00', durationMinutes: 90, repeatDays: [], isMain: true, completedDates: [], createdAt: now },
-      { id: 'quest-reading', title: 'Прочитать 20 страниц', description: '', difficulty: 'medium', skillId: 'reading', dueDate: today, scheduledTime: null, durationMinutes: 30, repeatDays: [], isMain: false, completedDates: [], createdAt: now },
-      { id: 'quest-walk', title: 'Прогулка или тренировка', description: '', difficulty: 'easy', skillId: 'sport', dueDate: today, scheduledTime: '18:30', durationMinutes: 30, repeatDays: [], isMain: false, completedDates: [], createdAt: now },
+      { id: 'quest-project', title: 'Поработать над главным проектом', description: 'Сделать один конкретный шаг, который двигает проект вперёд.', difficulty: 'hard', skillId: 'programming', dueDate: today, scheduledTime: '10:00', durationMinutes: 90, repeatDays: [], isMain: true, completedDates: [], archivedAt: null, createdAt: now },
+      { id: 'quest-reading', title: 'Прочитать 20 страниц', description: '', difficulty: 'medium', skillId: 'reading', dueDate: today, scheduledTime: null, durationMinutes: 30, repeatDays: [], isMain: false, completedDates: [], archivedAt: null, createdAt: now },
+      { id: 'quest-walk', title: 'Прогулка или тренировка', description: '', difficulty: 'easy', skillId: 'sport', dueDate: today, scheduledTime: '18:30', durationMinutes: 30, repeatDays: [], isMain: false, completedDates: [], archivedAt: null, createdAt: now },
     ],
+    goals: [],
     rewards: [
       { id: 'reward-evening', title: 'Свободный вечер', description: 'Отдых без чувства вины', icon: '🌙', cost: 30, createdAt: now },
       { id: 'reward-film', title: 'Посмотреть фильм', description: 'Выбрать фильм из своего списка', icon: '🎬', cost: 20, createdAt: now },
@@ -132,5 +147,28 @@ export function createInitialState(): AppState {
     ],
     history: [],
     preferences: { todayMode: 'list' },
+  }
+}
+
+type StoredState = Partial<Omit<AppState, 'version' | 'quests'>> & {
+  version?: number
+  quests?: Array<Partial<Quest>>
+}
+
+export function migrateState(value: unknown): AppState {
+  const fallback = createInitialState()
+  if (!value || typeof value !== 'object') return fallback
+  const stored = value as StoredState
+  if (!Array.isArray(stored.skills) || !Array.isArray(stored.quests)) return fallback
+
+  return {
+    version: 2,
+    profile: stored.profile ?? fallback.profile,
+    skills: stored.skills,
+    quests: stored.quests.map((quest) => ({ ...quest, archivedAt: quest.archivedAt ?? null })) as Quest[],
+    goals: Array.isArray(stored.goals) ? stored.goals : [],
+    rewards: Array.isArray(stored.rewards) ? stored.rewards : [],
+    history: Array.isArray(stored.history) ? stored.history : [],
+    preferences: stored.preferences ?? fallback.preferences,
   }
 }

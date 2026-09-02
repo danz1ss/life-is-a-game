@@ -43,7 +43,7 @@ export function App() {
       </aside>
       <main className="main-content">
         {page === 'today' && <DashboardPage onNavigate={setPage} />}
-        {page === 'quests' && <QuestsPage />}
+        {page === 'quests' && <QuestsPage onNavigate={setPage} />}
         {page === 'tree' && <TreePage />}
         {page === 'progress' && <ProgressPage />}
         {page === 'rewards' && <RewardsPage />}

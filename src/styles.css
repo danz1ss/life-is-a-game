@@ -130,10 +130,19 @@ h1, h2, h3, p { margin-top: 0; }
 .quest-card__topline { display: flex; align-items: center; gap: 8px; }
 .quest-card h3 { overflow: hidden; margin: 0 0 7px; font-size: 13px; font-weight: 650; text-overflow: ellipsis; white-space: nowrap; }
 .quest-card p { margin: -1px 0 9px; color: #79849a; font-size: 11px; line-height: 1.5; }
+.quest-description--compact { display: -webkit-box; overflow: hidden; margin-bottom: 7px !important; font-size: 9px !important; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
+.quest-check--static { cursor: default; opacity: .35; }
+.quest-card__footer { margin-top: 10px; padding-top: 9px; border-top: 1px solid #222d42; }
+.quest-status { padding: 2px 6px; border-radius: 5px; font-size: 8px; font-weight: 700; }
+.quest-status--danger { color: #ff9cae; background: #552130; }
+.quest-status--muted { color: #8993a8; background: #293247; }
+.quest-status--success { color: #79ddb7; background: #174434; }
+.quest-status--violet { color: #b9afff; background: #332b5b; }
 .main-badge { display: inline-flex; align-items: center; gap: 3px; padding: 2px 5px; border-radius: 5px; color: #b5a8ff; background: #362d63; font-size: 8px; text-transform: uppercase; }
 .quest-meta { display: flex; flex-wrap: wrap; gap: 9px; color: #68748b; font-size: 9px; }
 .quest-meta > span { display: inline-flex; align-items: center; gap: 3px; }
 .skill-pill i { width: 5px; height: 5px; border-radius: 50%; }
+.goal-pill { max-width: 190px; overflow: hidden; color: #8e83c5; text-overflow: ellipsis; white-space: nowrap; }
 .quest-actions { display: flex; gap: 1px; opacity: .3; transition: opacity .2s; }
 .quest-card:hover .quest-actions { opacity: 1; }
 
@@ -145,6 +154,7 @@ h1, h2, h3, p { margin-top: 0; }
 .skill-summary__body > span { display: flex; justify-content: space-between; margin-bottom: 6px; }
 .skill-summary__body strong { font-size: 10px; }
 .skill-summary__body small { color: #69748a; font-size: 9px; }
+.skill-summary__goal { display: flex !important; align-items: center; justify-content: flex-start !important; gap: 3px; overflow: hidden; margin: -1px 0 6px !important; color: #777f9b; font-size: 8px; text-overflow: ellipsis; white-space: nowrap; }
 .skill-summary em { color: #6fd7ad; font-size: 8px; font-style: normal; }
 
 .timeline-layout { max-height: 310px; overflow: auto; padding-right: 3px; scrollbar-width: thin; }
@@ -175,6 +185,43 @@ h1, h2, h3, p { margin-top: 0; }
 .quests-board { padding: 18px; }
 .quests-board__head { display: flex; justify-content: space-between; padding: 0 3px 13px; color: #8e98ad; font-size: 11px; }
 .quests-board__head small { color: #566177; font-size: 9px; }
+.quests-board__head > span { display: inline-flex; align-items: center; gap: 7px; }
+
+.today-quest-summary { display: flex; align-items: center; gap: 12px; width: 100%; margin-bottom: 12px; padding: 13px 16px; color: inherit; cursor: pointer; text-align: left; transition: .18s ease; }
+.today-quest-summary:hover { border-color: #3b4662; transform: translateY(-1px); }
+.today-quest-summary__icon { display: grid; place-items: center; width: 36px; height: 36px; border-radius: 11px; color: #a89aff; background: #2d2751; }
+.today-quest-summary > span:nth-child(2) { flex: 1; }
+.today-quest-summary strong, .today-quest-summary small { display: block; }
+.today-quest-summary strong { margin-bottom: 3px; font-size: 12px; }
+.today-quest-summary small { color: #717c92; font-size: 9px; }
+.today-quest-summary em { display: grid; place-items: center; min-width: 28px; height: 28px; border-radius: 9px; color: #c5bcff; background: #2b254d; font-size: 11px; font-style: normal; font-weight: 700; }
+.review-banner, .dashboard-review { display: flex; align-items: center; gap: 11px; border: 1px solid #694052; color: #e8a6b5; background: linear-gradient(90deg, #3a1e29, #221722); }
+.review-banner { margin-bottom: 13px; padding: 11px 14px; border-radius: 12px; }
+.review-banner div { flex: 1; }
+.review-banner strong, .review-banner span { display: block; }
+.review-banner strong { margin-bottom: 3px; font-size: 10px; }
+.review-banner span { color: #aa7785; font-size: 8px; }
+.review-banner b { display: grid; place-items: center; width: 27px; height: 27px; border-radius: 9px; color: #ffacbd; background: #592839; font-size: 10px; }
+.dashboard-review { width: 100%; margin: -10px 0 16px; padding: 10px 14px; border-radius: 11px; cursor: pointer; text-align: left; }
+.dashboard-review > span { flex: 1; }
+.dashboard-review strong, .dashboard-review small { display: block; }
+.dashboard-review strong { font-size: 10px; }
+.dashboard-review small { margin-top: 3px; color: #a77683; font-size: 8px; }
+.quest-planner-toolbar .segmented button em { min-width: 17px; padding: 1px 5px; border-radius: 7px; color: #8d84b8; background: #171629; font-size: 8px; font-style: normal; }
+.quest-sections { display: flex; flex-direction: column; gap: 13px; }
+.quest-section { padding: 18px; }
+.quest-section--danger { border-color: #553042; }
+.quest-section > header { display: flex; align-items: center; gap: 10px; margin-bottom: 13px; }
+.quest-section__icon { display: grid; place-items: center; width: 34px; height: 34px; border-radius: 10px; color: #a99cff; background: #2a2549; }
+.quest-section--danger .quest-section__icon { color: #ff95aa; background: #48202d; }
+.quest-section h2 { margin: 0 0 3px; font-size: 13px; }
+.quest-section header p { margin: 0; color: #687389; font-size: 8px; }
+.section-empty { padding: 22px; border: 1px dashed #28334a; border-radius: 11px; color: #626d83; font-size: 9px; text-align: center; }
+.overdue-actions { display: flex; flex-wrap: wrap; gap: 6px; }
+.mini-action { display: inline-flex; align-items: center; gap: 4px; min-height: 27px; padding: 5px 9px; border: 1px solid #334058; border-radius: 7px; color: #9aa4b8; background: #182235; font-size: 8px; cursor: pointer; }
+.mini-action:hover { border-color: #4a5873; color: #d4d9e5; }
+.mini-action--primary { border-color: #7162cf; color: #d3ccff; background: #302858; }
+.mini-action--muted { margin-left: auto; color: #777f91; background: transparent; }
 
 .branch-tabs { display: flex; align-items: center; gap: 6px; margin: -4px 0 13px; overflow-x: auto; }
 .branch-tabs button { display: inline-flex; align-items: center; gap: 6px; flex: none; padding: 7px 11px; border: 1px solid #263148; border-radius: 9px; color: #778298; background: #101827; font-size: 10px; cursor: pointer; }
@@ -196,9 +243,13 @@ h1, h2, h3, p { margin-top: 0; }
 .skill-node-label__top > span { display: grid; place-items: center; width: 31px; height: 31px; border-radius: 9px; font-size: 11px; font-weight: 800; }
 .skill-node-label__top small { color: #737e94; font-size: 8px; }
 .skill-node-label > strong { display: block; overflow: hidden; margin-bottom: 9px; font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
+.skill-node-goal { display: flex; align-items: center; gap: 4px; min-width: 0; margin: -2px 0 9px; color: #8279aa; font-size: 7px; }
+.skill-node-goal span { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.skill-node-goal em { color: #a99df2; font-style: normal; }
 .skill-flow-node.is-locked { filter: saturate(.25); opacity: .65; }
 .tree-hint { position: absolute; z-index: 4; bottom: 17px; left: 50%; display: flex; align-items: center; gap: 6px; padding: 7px 11px; border: 1px solid #273148; border-radius: 9px; color: #667187; background: #0c1321db; font-size: 9px; transform: translateX(-50%); pointer-events: none; }
 .skill-details { position: absolute; z-index: 5; top: 14px; right: 14px; width: 278px; padding: 20px; border: 1px solid #303a53; border-radius: 15px; background: #111a2bf2; box-shadow: 0 25px 70px #0009; backdrop-filter: blur(12px); }
+.skill-details--goal { width: 332px; max-height: calc(100% - 28px); overflow-y: auto; scrollbar-width: thin; }
 .skill-details__close { position: absolute; top: 10px; right: 10px; }
 .skill-details__icon { display: grid; place-items: center; width: 45px; height: 45px; margin-bottom: 15px; border-radius: 13px; font-size: 17px; font-weight: 800; }
 .skill-details h2 { margin-bottom: 8px; font-size: 20px; }
@@ -210,6 +261,29 @@ h1, h2, h3, p { margin-top: 0; }
 .locked-note { display: flex; gap: 7px; margin-bottom: 14px; padding: 9px; border: 1px solid #5b482c; border-radius: 8px; color: #d4a96c; background: #352817; font-size: 9px; line-height: 1.4; }
 .skill-details__actions { display: flex; gap: 6px; }
 .skill-details__actions .button { flex: 1; }
+.active-goal-card { margin: 18px 0 14px; padding: 13px; border: 1px solid #6656b263; border-radius: 12px; background: linear-gradient(145deg, #242044, #17192c); }
+.active-goal-card.is-paused { filter: saturate(.55); }
+.active-goal-card header { display: flex; align-items: center; justify-content: space-between; color: #a99df4; font-size: 8px; font-weight: 750; letter-spacing: .08em; text-transform: uppercase; }
+.active-goal-card header > span { display: flex; align-items: center; gap: 5px; }
+.active-goal-card h3 { margin: 8px 0; font-size: 13px; line-height: 1.35; }
+.active-goal-card blockquote { margin: 0 0 9px; padding-left: 9px; border-left: 2px solid #8f7cf76b; color: #9a94ae; font-size: 8px; font-style: italic; line-height: 1.45; }
+.active-goal-card > p { display: flex; gap: 6px; margin: 0 0 10px; color: #788399; font-size: 8px; line-height: 1.45; }
+.goal-criteria-icon { display: grid; flex: 0 0 15px; place-items: center; width: 15px; height: 15px; border-radius: 50%; color: #68d3aa; background: #1b4437; font-size: 8px; }
+.goal-progress-line { display: flex; justify-content: space-between; margin: 9px 0 6px; color: #7c869b; font-size: 8px; }
+.goal-progress-line strong { color: #b7adf5; }
+.goal-deadline { display: flex; align-items: center; gap: 4px; margin-top: 8px; color: #777f96; font-size: 8px; }
+.goal-card-actions { display: flex; gap: 5px; margin-top: 12px; }
+.goal-card-actions .button { min-height: 31px; padding: 6px 8px; font-size: 8px; }
+.goal-card-actions .button--success { flex: 1; }
+.goal-reward-small { display: block; margin-top: 8px; color: #6f7890; font-size: 7px; text-align: center; }
+.add-goal-card { display: flex; flex-direction: column; align-items: center; width: 100%; margin: 18px 0 14px; padding: 15px; border: 1px dashed #554a8c; border-radius: 12px; color: #b2a7f2; background: #201c3a5e; cursor: pointer; text-align: center; }
+.add-goal-card > span { display: grid; place-items: center; width: 37px; height: 37px; margin-bottom: 8px; border-radius: 11px; background: #342c5b; }
+.add-goal-card strong { font-size: 10px; }
+.add-goal-card small { max-width: 230px; margin-top: 4px; color: #77718d; font-size: 8px; line-height: 1.4; }
+.completed-goals { display: flex; align-items: center; gap: 8px; margin: 10px 0; padding: 9px; border: 1px solid #3f492d; border-radius: 9px; color: #b8c478; background: #242b1d; }
+.completed-goals strong, .completed-goals small { display: block; }
+.completed-goals strong { font-size: 8px; }
+.completed-goals small { max-width: 220px; overflow: hidden; margin-top: 2px; color: #788052; font-size: 7px; text-overflow: ellipsis; white-space: nowrap; }
 
 .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 17px; }
 .stat-card { display: flex; align-items: center; gap: 13px; padding: 17px; border: 1px solid #202b42; border-radius: 15px; background: #101827; }
@@ -241,6 +315,7 @@ h1, h2, h3, p { margin-top: 0; }
 .history-icon { display: grid; place-items: center; width: 27px; height: 27px; border-radius: 8px; font-size: 10px; }
 .history-icon--quest { color: #72ddb4; background: #174535; }
 .history-icon--reward { color: #ffc174; background: #503418; }
+.history-icon--goal { color: #d4c66e; background: #4b4520; }
 .history-list strong, .history-list small { display: block; }
 .history-list strong { font-size: 9px; }
 .history-list small { margin-top: 3px; color: #606b81; font-size: 8px; }
@@ -313,6 +388,11 @@ h1, h2, h3, p { margin-top: 0; }
 .check-field strong { font-size: 10px; }
 .check-field small { margin-top: 3px; color: #667187; font-size: 8px; }
 .form-actions { display: flex; justify-content: flex-end; gap: 8px; padding-top: 5px; }
+.range-input { padding: 0 !important; border: 0 !important; accent-color: var(--violet); }
+.goal-reward-note { display: flex; align-items: center; gap: 9px; padding: 11px; border: 1px solid #554b2e; border-radius: 10px; color: #d3c26c; background: #29271a; }
+.goal-reward-note strong, .goal-reward-note small { display: block; }
+.goal-reward-note strong { font-size: 9px; }
+.goal-reward-note small { margin-top: 3px; color: #827c50; font-size: 8px; }
 
 .game-toast, .inline-toast { position: fixed; z-index: 200; left: 50%; display: flex; align-items: center; gap: 9px; border: 1px solid #8f7cf76b; color: #eeeaff; background: #282249ed; box-shadow: 0 18px 55px #0008; animation: toastIn .3s ease; transform: translateX(-50%); }
 .game-toast { bottom: 26px; padding: 11px 16px; border-radius: 12px; font-size: 11px; }

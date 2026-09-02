@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
-import { createInitialState, dateKey, difficultyConfig, isQuestComplete } from './game'
-import type { AppState, Profile, Quest, QuestDraft, Reward, RewardDraft, Skill, SkillDraft } from './types'
+import { createInitialState, dateKey, difficultyConfig, goalCompletionReward, isQuestComplete, migrateState } from './game'
+import type { AppState, Profile, Quest, QuestDraft, Reward, RewardDraft, Skill, SkillDraft, SkillGoal, SkillGoalDraft } from './types'
 
 type SaveStatus = 'loading' | 'saved' | 'saving' | 'error'
 
@@ -12,12 +12,18 @@ interface StoreValue {
   addQuest: (draft: QuestDraft) => void
   updateQuest: (id: string, patch: Partial<Quest>) => void
   deleteQuest: (id: string) => void
+  archiveQuest: (id: string) => void
+  restoreQuest: (id: string) => void
   toggleQuest: (id: string, onDate?: string) => void
   setMainQuest: (id: string) => void
   addSkill: (draft: SkillDraft) => void
   updateSkill: (id: string, patch: Partial<Skill>) => void
   deleteSkill: (id: string) => void
   moveSkill: (id: string, position: { x: number; y: number }) => void
+  addGoal: (draft: SkillGoalDraft) => void
+  updateGoal: (id: string, patch: Partial<SkillGoal>) => void
+  deleteGoal: (id: string) => void
+  completeGoal: (id: string) => void
   addReward: (draft: RewardDraft) => void
   updateReward: (id: string, patch: Partial<Reward>) => void
   deleteReward: (id: string) => void
@@ -62,7 +68,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     loadPersistedState()
       .then((stored) => {
         if (!active) return
-        const next = stored ?? createInitialState()
+        const next = stored ? migrateState(stored) : createInitialState()
         previousLevel.current = getProfileLevel(next.profile.totalXp)
         setState(next)
         hydrated.current = true
@@ -103,7 +109,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         ...current,
         quests: [
           ...current.quests.map((quest) => draft.isMain ? { ...quest, isMain: false } : quest),
-          { ...draft, id: uuid(), completedDates: [], createdAt: new Date().toISOString() },
+          { ...draft, id: uuid(), completedDates: [], archivedAt: null, createdAt: new Date().toISOString() },
         ],
       }))
     }
@@ -119,6 +125,26 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
     const deleteQuest = (id: string) => {
       setState((current) => current && ({ ...current, quests: current.quests.filter((quest) => quest.id !== id) }))
+    }
+
+    const archiveQuest = (id: string) => {
+      setState((current) => current && ({
+        ...current,
+        quests: current.quests.map((quest) => quest.id === id
+          ? { ...quest, archivedAt: new Date().toISOString(), isMain: false }
+          : quest),
+      }))
+      setToast('Квест отправлен в архив')
+    }
+
+    const restoreQuest = (id: string) => {
+      setState((current) => current && ({
+        ...current,
+        quests: current.quests.map((quest) => quest.id === id
+          ? { ...quest, archivedAt: null, dueDate: quest.repeatDays.length > 0 ? null : dateKey() }
+          : quest),
+      }))
+      setToast('Квест возвращён на сегодня')
     }
 
     const toggleQuest = (id: string, onDate = dateKey()) => {
@@ -202,6 +228,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         ...current,
         skills: current.skills.filter((skill) => skill.id !== id).map((skill) => skill.parentId === id ? { ...skill, parentId: null } : skill),
         quests: current.quests.map((quest) => quest.skillId === id ? { ...quest, skillId: null } : quest),
+        goals: current.goals.filter((goal) => goal.skillId !== id),
       }))
     }
 
@@ -210,6 +237,68 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         ...current,
         skills: current.skills.map((skill) => skill.id === id ? { ...skill, position } : skill),
       }))
+    }
+
+    const addGoal = (draft: SkillGoalDraft) => {
+      setState((current) => {
+        if (!current || current.goals.some((goal) => goal.skillId === draft.skillId && goal.status !== 'completed')) return current
+        return {
+          ...current,
+          goals: [...current.goals, {
+            ...draft,
+            progress: Math.max(0, Math.min(100, draft.progress)),
+            id: uuid(), status: 'active', createdAt: new Date().toISOString(), completedAt: null,
+          }],
+        }
+      })
+      setToast('Главная цель навыка создана')
+    }
+
+    const updateGoal = (id: string, patch: Partial<SkillGoal>) => {
+      setState((current) => current && ({
+        ...current,
+        goals: current.goals.map((goal) => goal.id === id
+          ? { ...goal, ...patch, progress: patch.progress === undefined ? goal.progress : Math.max(0, Math.min(100, patch.progress)) }
+          : goal),
+      }))
+    }
+
+    const deleteGoal = (id: string) => {
+      setState((current) => current && ({
+        ...current,
+        goals: current.goals.filter((goal) => goal.id !== id || goal.status === 'completed'),
+      }))
+    }
+
+    const completeGoal = (id: string) => {
+      const goal = state.goals.find((item) => item.id === id && item.status !== 'completed')
+      if (!goal) return
+      setState((current) => {
+        if (!current) return current
+        const currentGoal = current.goals.find((item) => item.id === id && item.status !== 'completed')
+        if (!currentGoal) return current
+        const now = new Date().toISOString()
+        return {
+          ...current,
+          profile: {
+            ...current.profile,
+            totalXp: current.profile.totalXp + goalCompletionReward.xp,
+            gold: current.profile.gold + goalCompletionReward.gold,
+          },
+          skills: current.skills.map((skill) => skill.id === currentGoal.skillId
+            ? { ...skill, xp: skill.xp + goalCompletionReward.xp }
+            : skill),
+          goals: current.goals.map((item) => item.id === id
+            ? { ...item, progress: 100, status: 'completed', completedAt: now }
+            : item),
+          history: [...current.history, {
+            id: uuid(), type: 'goal', goalId: currentGoal.id, skillId: currentGoal.skillId,
+            date: dateKey(), createdAt: now, title: currentGoal.title,
+            xp: goalCompletionReward.xp, gold: goalCompletionReward.gold,
+          }],
+        }
+      })
+      setToast(`Цель достигнута · +${goalCompletionReward.xp} XP · +${goalCompletionReward.gold} золота`)
     }
 
     const addReward = (draft: RewardDraft) => {
@@ -277,15 +366,16 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       if (!window.lifeGame) return false
       const result = await window.lifeGame.importBackup()
       if (result.canceled || !result.state) return false
-      setState(result.state)
+      setState(migrateState(result.state))
       setToast('Резервная копия восстановлена')
       return true
     }
 
     return {
       state, saveStatus, toast, dismissToast: () => setToast(null),
-      addQuest, updateQuest, deleteQuest, toggleQuest, setMainQuest,
+      addQuest, updateQuest, deleteQuest, archiveQuest, restoreQuest, toggleQuest, setMainQuest,
       addSkill, updateSkill, deleteSkill, moveSkill,
+      addGoal, updateGoal, deleteGoal, completeGoal,
       addReward, updateReward, deleteReward, redeemReward,
       updateProfile, setTodayMode, exportBackup, importBackup,
     }

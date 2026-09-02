@@ -3,6 +3,8 @@ const path = require('node:path')
 const fs = require('node:fs')
 const { DatabaseSync } = require('node:sqlite')
 
+if (process.env.LIFE_GAME_USER_DATA) app.setPath('userData', process.env.LIFE_GAME_USER_DATA)
+
 let database
 
 function getDatabase() {

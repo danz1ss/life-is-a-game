@@ -1,9 +1,9 @@
-import { CalendarDays, CheckCircle2, ChevronRight, Clock3, Coins, Flame, List, Plus, Sparkles, Star, Timeline, Zap } from 'lucide-react'
+import { CalendarDays, CheckCircle2, ChevronRight, CircleAlert, Clock3, Coins, Flame, List, Plus, Sparkles, Star, Target, Timeline, Zap } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { QuestCard } from '../components/QuestCard'
 import { QuestModal } from '../components/QuestModal'
 import { EmptyState, ProgressBar } from '../components/Ui'
-import { calculateStreak, dateKey, difficultyConfig, formatDuration, isQuestComplete, isQuestForDate, levelProgress, longDateLabel, skillLevel } from '../lib/game'
+import { activeGoalForSkill, calculateStreak, dateKey, difficultyConfig, formatDuration, isQuestComplete, isQuestForDate, isQuestOverdue, levelProgress, longDateLabel, skillLevel } from '../lib/game'
 import { useStore } from '../lib/store'
 import type { Quest, QuestDraft } from '../lib/types'
 
@@ -19,6 +19,7 @@ export function DashboardPage({ onNavigate }: { onNavigate: (page: string) => vo
   const completed = todayQuests.filter((quest) => isQuestComplete(quest, today)).length
   const xpToday = state.history.filter((event) => event.type === 'quest' && event.date === today).reduce((sum, event) => sum + event.xp, 0)
   const topSkills = [...state.skills].sort((a, b) => b.xp - a.xp).slice(0, 4)
+  const overdueCount = state.quests.filter((quest) => isQuestOverdue(quest, today)).length
 
   const saveQuest = (draft: QuestDraft) => {
     if (questModal === 'new') addQuest(draft)
@@ -37,10 +38,12 @@ export function DashboardPage({ onNavigate }: { onNavigate: (page: string) => vo
         <button className="button button--primary" type="button" onClick={() => setQuestModal('new')}><Plus size={18} /> Новый квест</button>
       </header>
 
+      {overdueCount > 0 && <button className="dashboard-review" onClick={() => onNavigate('quests')}><CircleAlert size={17} /><span><strong>{overdueCount} {overdueCount === 1 ? 'квест требует' : 'квеста требуют'} решения</strong><small>Они не перенесены автоматически — разберите их в планировщике.</small></span><ChevronRight size={17} /></button>}
+
       <section className="dashboard-grid">
         <article className="panel main-quest-panel">
           <div className="panel-title"><span><Star size={16} fill="currentColor" /> Главный квест дня</span>{mainQuest && <button className="text-button" onClick={() => setQuestModal(mainQuest)}>Изменить</button>}</div>
-          {mainQuest ? <MainQuest quest={mainQuest} onToggle={() => toggleQuest(mainQuest.id, today)} skillName={state.skills.find((skill) => skill.id === mainQuest.skillId)?.name} /> : (
+          {mainQuest ? <MainQuest quest={mainQuest} onToggle={() => toggleQuest(mainQuest.id, today)} skillName={state.skills.find((skill) => skill.id === mainQuest.skillId)?.name} goalTitle={mainQuest.skillId ? activeGoalForSkill(state.goals, mainQuest.skillId)?.title : undefined} /> : (
             <EmptyState icon="✦" title="Выберите главный квест" text="Отметьте самую важную задачу дня — она будет всегда перед глазами." action={<button className="button button--secondary" onClick={() => onNavigate('quests')}>Выбрать из квестов</button>} />
           )}
         </article>
@@ -70,7 +73,7 @@ export function DashboardPage({ onNavigate }: { onNavigate: (page: string) => vo
             </div>
           </div>
           {todayQuests.length === 0 ? <EmptyState icon="☀" title="Свободный день" text="На сегодня ещё нет квестов." /> : state.preferences.todayMode === 'list' ? (
-            <div className="quest-list">{todayQuests.map((quest) => <QuestCard key={quest.id} quest={quest} skill={state.skills.find((skill) => skill.id === quest.skillId)} date={today} onToggle={() => toggleQuest(quest.id, today)} onEdit={() => setQuestModal(quest)} compact />)}</div>
+            <div className="quest-list">{todayQuests.map((quest) => <QuestCard key={quest.id} quest={quest} skill={state.skills.find((skill) => skill.id === quest.skillId)} goalTitle={quest.skillId ? activeGoalForSkill(state.goals, quest.skillId)?.title : undefined} date={today} onToggle={() => toggleQuest(quest.id, today)} onEdit={() => setQuestModal(quest)} compact />)}</div>
           ) : <DayTimeline quests={todayQuests} onToggle={(id) => toggleQuest(id, today)} />}
         </article>
 
@@ -79,10 +82,11 @@ export function DashboardPage({ onNavigate }: { onNavigate: (page: string) => vo
           <div className="skill-summary-list">
             {topSkills.map((skill) => {
               const progress = skillLevel(skill)
+              const goal = activeGoalForSkill(state.goals, skill.id)
               const todayXp = state.history.filter((event) => event.type === 'quest' && event.date === today && event.skillId === skill.id).reduce((sum, event) => sum + event.xp, 0)
               return <button key={skill.id} className="skill-summary" onClick={() => onNavigate('tree')}>
                 <span className="skill-summary__icon" style={{ color: skill.color, background: `${skill.color}18` }}>{skill.icon}</span>
-                <span className="skill-summary__body"><span><strong>{skill.name}</strong><small>Ур. {progress.level}</small></span><ProgressBar value={progress.percent} color={skill.color} compact /></span>
+                <span className="skill-summary__body"><span><strong>{skill.name}</strong><small>Ур. {progress.level}</small></span>{goal && <span className="skill-summary__goal"><Target size={9} /> {goal.title} · {goal.progress}%</span>}<ProgressBar value={progress.percent} color={skill.color} compact /></span>
                 {todayXp > 0 && <em>+{todayXp}</em>}
               </button>
             })}
@@ -96,7 +100,7 @@ export function DashboardPage({ onNavigate }: { onNavigate: (page: string) => vo
   )
 }
 
-function MainQuest({ quest, skillName, onToggle }: { quest: Quest; skillName?: string; onToggle: () => void }) {
+function MainQuest({ quest, skillName, goalTitle, onToggle }: { quest: Quest; skillName?: string; goalTitle?: string; onToggle: () => void }) {
   const reward = difficultyConfig[quest.difficulty]
   const complete = isQuestComplete(quest, dateKey())
   return (
@@ -110,6 +114,7 @@ function MainQuest({ quest, skillName, onToggle }: { quest: Quest; skillName?: s
           {quest.scheduledTime && <span><Clock3 size={14} /> {quest.scheduledTime}</span>}
           <span><Clock3 size={14} /> {formatDuration(quest.durationMinutes)}</span>
           {skillName && <span><Sparkles size={14} /> {skillName}</span>}
+          {goalTitle && <span><Target size={14} /> {goalTitle}</span>}
           <span><Zap size={14} /> +{reward.xp} XP</span>
           <span><Coins size={14} /> +{reward.gold}</span>
         </div>

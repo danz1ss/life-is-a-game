@@ -55,7 +55,7 @@ export function ProgressPage() {
     </section>
     <section className="panel history-panel">
       <div className="panel-title"><span>Последние события</span><small>Локальная история</small></div>
-      {state.history.length === 0 ? <div className="history-empty">Выполните первый квест — здесь появится запись о прогрессе.</div> : <div className="history-list">{[...state.history].reverse().slice(0, 12).map((event) => <div key={event.id}><span className={`history-icon history-icon--${event.type}`}>{event.type === 'quest' ? '✓' : '★'}</span><div><strong>{event.title}</strong><small>{new Intl.DateTimeFormat('ru-RU', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' }).format(new Date(event.createdAt))}</small></div><em>{event.xp > 0 ? `+${event.xp} XP` : `${event.gold} золота`}</em></div>)}</div>}
+      {state.history.length === 0 ? <div className="history-empty">Выполните первый квест — здесь появится запись о прогрессе.</div> : <div className="history-list">{[...state.history].reverse().slice(0, 12).map((event) => <div key={event.id}><span className={`history-icon history-icon--${event.type}`}>{event.type === 'quest' ? '✓' : event.type === 'goal' ? '♛' : '★'}</span><div><strong>{event.title}</strong><small>{event.type === 'goal' ? 'Достигнута главная цель · ' : ''}{new Intl.DateTimeFormat('ru-RU', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' }).format(new Date(event.createdAt))}</small></div><em>{event.xp > 0 ? `+${event.xp} XP` : `${event.gold} золота`}</em></div>)}</div>}
     </section>
   </div>
 }
