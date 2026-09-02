@@ -1,0 +1,65 @@
+import { Activity, CheckCircle2, Flame, Sparkles, TrendingUp, Zap } from 'lucide-react'
+import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
+import { PageHeader, ProgressBar } from '../components/Ui'
+import { calculateStreak, dateKey, levelProgress, skillLevel } from '../lib/game'
+import { useStore } from '../lib/store'
+
+export function ProgressPage() {
+  const { state } = useStore()
+  const profile = levelProgress(state.profile.totalXp)
+  const questHistory = state.history.filter((event) => event.type === 'quest')
+  const today = dateKey()
+  const todayXp = questHistory.filter((event) => event.date === today).reduce((sum, event) => sum + event.xp, 0)
+  const chartData = Array.from({ length: 14 }, (_, index) => {
+    const date = new Date()
+    date.setDate(date.getDate() - (13 - index))
+    const key = dateKey(date)
+    return {
+      date: new Intl.DateTimeFormat('ru-RU', { day: '2-digit', month: '2-digit' }).format(date),
+      xp: questHistory.filter((event) => event.date === key).reduce((sum, event) => sum + event.xp, 0),
+    }
+  })
+  const rankedSkills = [...state.skills].sort((a, b) => b.xp - a.xp)
+
+  return <div className="page">
+    <PageHeader eyebrow="Хроника героя" title="Прогресс" description="Опыт показывает не намерения, а уже выполненные реальные действия." />
+    <section className="stats-grid">
+      <StatCard icon={<Zap />} label="Общий опыт" value={`${state.profile.totalXp} XP`} hint={`Уровень ${profile.level}`} tone="violet" />
+      <StatCard icon={<Activity />} label="Сегодня" value={`+${todayXp} XP`} hint={`${questHistory.filter((event) => event.date === today).length} выполнено`} tone="blue" />
+      <StatCard icon={<CheckCircle2 />} label="Всего квестов" value={String(questHistory.length)} hint="завершено" tone="green" />
+      <StatCard icon={<Flame />} label="Текущая серия" value={`${calculateStreak(state.profile.activeDays)} дн.`} hint="без штрафов" tone="orange" />
+    </section>
+    <section className="progress-layout">
+      <article className="panel chart-panel">
+        <div className="panel-title"><span><TrendingUp size={17} /> Активность за 14 дней</span><small>Опыт за выполненные квесты</small></div>
+        <div className="chart-wrap">
+          <ResponsiveContainer width="100%" height="100%">
+            <AreaChart data={chartData} margin={{ top: 16, right: 10, left: -20, bottom: 0 }}>
+              <defs><linearGradient id="xpGradient" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#8f7cf7" stopOpacity={0.42}/><stop offset="100%" stopColor="#8f7cf7" stopOpacity={0}/></linearGradient></defs>
+              <CartesianGrid stroke="#202a40" strokeDasharray="4 6" vertical={false} />
+              <XAxis dataKey="date" stroke="#667089" tickLine={false} axisLine={false} fontSize={11} />
+              <YAxis stroke="#667089" tickLine={false} axisLine={false} fontSize={11} allowDecimals={false} />
+              <Tooltip contentStyle={{ background: '#111829', border: '1px solid #2b3550', borderRadius: 12 }} labelStyle={{ color: '#99a4bd' }} />
+              <Area type="monotone" dataKey="xp" stroke="#9b8cff" strokeWidth={2.5} fill="url(#xpGradient)" />
+            </AreaChart>
+          </ResponsiveContainer>
+        </div>
+      </article>
+      <article className="panel skill-ranking-panel">
+        <div className="panel-title"><span><Sparkles size={17} /> Навыки</span><small>{state.skills.length} всего</small></div>
+        <div className="ranking-list">{rankedSkills.map((skill, index) => {
+          const progress = skillLevel(skill)
+          return <div className="ranking-row" key={skill.id}><b>{String(index + 1).padStart(2, '0')}</b><span className="ranking-row__icon" style={{ color: skill.color, background: `${skill.color}18` }}>{skill.icon}</span><div><span><strong>{skill.name}</strong><small>Ур. {progress.level}</small></span><ProgressBar value={progress.percent} color={skill.color} compact /></div><em>{skill.xp} XP</em></div>
+        })}</div>
+      </article>
+    </section>
+    <section className="panel history-panel">
+      <div className="panel-title"><span>Последние события</span><small>Локальная история</small></div>
+      {state.history.length === 0 ? <div className="history-empty">Выполните первый квест — здесь появится запись о прогрессе.</div> : <div className="history-list">{[...state.history].reverse().slice(0, 12).map((event) => <div key={event.id}><span className={`history-icon history-icon--${event.type}`}>{event.type === 'quest' ? '✓' : '★'}</span><div><strong>{event.title}</strong><small>{new Intl.DateTimeFormat('ru-RU', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' }).format(new Date(event.createdAt))}</small></div><em>{event.xp > 0 ? `+${event.xp} XP` : `${event.gold} золота`}</em></div>)}</div>}
+    </section>
+  </div>
+}
+
+function StatCard({ icon, label, value, hint, tone }: { icon: React.ReactNode; label: string; value: string; hint: string; tone: string }) {
+  return <article className={`stat-card stat-card--${tone}`}><span className="stat-card__icon">{icon}</span><div><small>{label}</small><strong>{value}</strong><span>{hint}</span></div></article>
+}

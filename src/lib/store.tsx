@@ -1,0 +1,314 @@
+import { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { createInitialState, dateKey, difficultyConfig, isQuestComplete } from './game'
+import type { AppState, Profile, Quest, QuestDraft, Reward, RewardDraft, Skill, SkillDraft } from './types'
+
+type SaveStatus = 'loading' | 'saved' | 'saving' | 'error'
+
+interface StoreValue {
+  state: AppState
+  saveStatus: SaveStatus
+  toast: string | null
+  dismissToast: () => void
+  addQuest: (draft: QuestDraft) => void
+  updateQuest: (id: string, patch: Partial<Quest>) => void
+  deleteQuest: (id: string) => void
+  toggleQuest: (id: string, onDate?: string) => void
+  setMainQuest: (id: string) => void
+  addSkill: (draft: SkillDraft) => void
+  updateSkill: (id: string, patch: Partial<Skill>) => void
+  deleteSkill: (id: string) => void
+  moveSkill: (id: string, position: { x: number; y: number }) => void
+  addReward: (draft: RewardDraft) => void
+  updateReward: (id: string, patch: Partial<Reward>) => void
+  deleteReward: (id: string) => void
+  redeemReward: (id: string) => boolean
+  updateProfile: (patch: Partial<Profile>) => void
+  setTodayMode: (mode: 'list' | 'timeline') => void
+  exportBackup: () => Promise<string | null>
+  importBackup: () => Promise<boolean>
+}
+
+const StoreContext = createContext<StoreValue | null>(null)
+
+function uuid() {
+  return crypto.randomUUID()
+}
+
+async function loadPersistedState() {
+  if (window.lifeGame) return window.lifeGame.loadState()
+  const raw = localStorage.getItem('life-is-a-game-state')
+  return raw ? (JSON.parse(raw) as AppState) : null
+}
+
+async function persistState(state: AppState) {
+  if (window.lifeGame) return window.lifeGame.saveState(state)
+  localStorage.setItem('life-is-a-game-state', JSON.stringify(state))
+  return true
+}
+
+function activeDaysFromHistory(history: AppState['history']) {
+  return [...new Set(history.filter((event) => event.type === 'quest').map((event) => event.date))].sort()
+}
+
+export function StoreProvider({ children }: { children: ReactNode }) {
+  const [state, setState] = useState<AppState | null>(null)
+  const [saveStatus, setSaveStatus] = useState<SaveStatus>('loading')
+  const [toast, setToast] = useState<string | null>(null)
+  const hydrated = useRef(false)
+  const previousLevel = useRef(1)
+
+  useEffect(() => {
+    let active = true
+    loadPersistedState()
+      .then((stored) => {
+        if (!active) return
+        const next = stored ?? createInitialState()
+        previousLevel.current = getProfileLevel(next.profile.totalXp)
+        setState(next)
+        hydrated.current = true
+        setSaveStatus('saved')
+      })
+      .catch(() => {
+        if (!active) return
+        setState(createInitialState())
+        hydrated.current = true
+        setSaveStatus('error')
+      })
+    return () => { active = false }
+  }, [])
+
+  useEffect(() => {
+    if (!state || !hydrated.current) return
+    setSaveStatus('saving')
+    const timer = window.setTimeout(() => {
+      persistState(state)
+        .then(() => setSaveStatus('saved'))
+        .catch(() => setSaveStatus('error'))
+    }, 250)
+    return () => window.clearTimeout(timer)
+  }, [state])
+
+  useEffect(() => {
+    if (!state) return
+    const level = getProfileLevel(state.profile.totalXp)
+    if (level > previousLevel.current) setToast(`Новый уровень: ${level}!`)
+    previousLevel.current = level
+  }, [state?.profile.totalXp, state])
+
+  const value = useMemo<StoreValue | null>(() => {
+    if (!state) return null
+
+    const addQuest = (draft: QuestDraft) => {
+      setState((current) => current && ({
+        ...current,
+        quests: [
+          ...current.quests.map((quest) => draft.isMain ? { ...quest, isMain: false } : quest),
+          { ...draft, id: uuid(), completedDates: [], createdAt: new Date().toISOString() },
+        ],
+      }))
+    }
+
+    const updateQuest = (id: string, patch: Partial<Quest>) => {
+      setState((current) => current && ({
+        ...current,
+        quests: current.quests.map((quest) => quest.id === id
+          ? { ...quest, ...patch }
+          : patch.isMain ? { ...quest, isMain: false } : quest),
+      }))
+    }
+
+    const deleteQuest = (id: string) => {
+      setState((current) => current && ({ ...current, quests: current.quests.filter((quest) => quest.id !== id) }))
+    }
+
+    const toggleQuest = (id: string, onDate = dateKey()) => {
+      setState((current) => {
+        if (!current) return current
+        const quest = current.quests.find((item) => item.id === id)
+        if (!quest) return current
+        const complete = !isQuestComplete(quest, onDate)
+        const reward = difficultyConfig[quest.difficulty]
+        const completionDate = quest.repeatDays.length > 0 ? onDate : (quest.completedDates[0] ?? onDate)
+        const eventIndex = current.history.findIndex((event) => event.type === 'quest' && event.questId === id && event.date === completionDate)
+
+        let history = [...current.history]
+        if (complete) {
+          history.push({
+            id: uuid(), type: 'quest', date: onDate, createdAt: new Date().toISOString(), title: quest.title,
+            questId: quest.id, skillId: quest.skillId, xp: reward.xp, gold: reward.gold,
+          })
+          setToast(`+${reward.xp} XP · +${reward.gold} золота`)
+        } else if (eventIndex >= 0) {
+          history.splice(eventIndex, 1)
+        }
+
+        return {
+          ...current,
+          profile: {
+            ...current.profile,
+            totalXp: Math.max(0, current.profile.totalXp + (complete ? reward.xp : -reward.xp)),
+            gold: Math.max(0, current.profile.gold + (complete ? reward.gold : -reward.gold)),
+            activeDays: activeDaysFromHistory(history),
+          },
+          skills: current.skills.map((skill) => skill.id === quest.skillId
+            ? { ...skill, xp: Math.max(0, skill.xp + (complete ? reward.xp : -reward.xp)) }
+            : skill),
+          quests: current.quests.map((item) => item.id === id
+            ? {
+              ...item,
+              completedDates: complete
+                ? (item.repeatDays.length > 0 ? [...item.completedDates, onDate] : [onDate])
+                : (item.repeatDays.length > 0 ? item.completedDates.filter((date) => date !== completionDate) : []),
+            }
+            : item),
+          history,
+        }
+      })
+    }
+
+    const setMainQuest = (id: string) => {
+      setState((current) => current && ({
+        ...current,
+        quests: current.quests.map((quest) => ({ ...quest, isMain: quest.id === id })),
+      }))
+    }
+
+    const addSkill = (draft: SkillDraft) => {
+      setState((current) => {
+        if (!current) return current
+        const index = current.skills.length
+        return {
+          ...current,
+          skills: [...current.skills, {
+            ...draft,
+            id: uuid(),
+            xp: 0,
+            position: draft.position ?? { x: (index % 4) * 230 - 300, y: Math.floor(index / 4) * 190 + 160 },
+            createdAt: new Date().toISOString(),
+          }],
+        }
+      })
+    }
+
+    const updateSkill = (id: string, patch: Partial<Skill>) => {
+      setState((current) => current && ({
+        ...current,
+        skills: current.skills.map((skill) => skill.id === id ? { ...skill, ...patch } : skill),
+      }))
+    }
+
+    const deleteSkill = (id: string) => {
+      setState((current) => current && ({
+        ...current,
+        skills: current.skills.filter((skill) => skill.id !== id).map((skill) => skill.parentId === id ? { ...skill, parentId: null } : skill),
+        quests: current.quests.map((quest) => quest.skillId === id ? { ...quest, skillId: null } : quest),
+      }))
+    }
+
+    const moveSkill = (id: string, position: { x: number; y: number }) => {
+      setState((current) => current && ({
+        ...current,
+        skills: current.skills.map((skill) => skill.id === id ? { ...skill, position } : skill),
+      }))
+    }
+
+    const addReward = (draft: RewardDraft) => {
+      setState((current) => current && ({
+        ...current,
+        rewards: [...current.rewards, { ...draft, id: uuid(), createdAt: new Date().toISOString() }],
+      }))
+    }
+
+    const updateReward = (id: string, patch: Partial<Reward>) => {
+      setState((current) => current && ({
+        ...current,
+        rewards: current.rewards.map((reward) => reward.id === id ? { ...reward, ...patch } : reward),
+      }))
+    }
+
+    const deleteReward = (id: string) => {
+      setState((current) => current && ({ ...current, rewards: current.rewards.filter((reward) => reward.id !== id) }))
+    }
+
+    const redeemReward = (id: string) => {
+      const reward = state.rewards.find((item) => item.id === id)
+      if (!reward || state.profile.gold < reward.cost) return false
+      setState((current) => {
+        if (!current) return current
+        const currentReward = current.rewards.find((item) => item.id === id)
+        if (!currentReward || current.profile.gold < currentReward.cost) return current
+        return {
+          ...current,
+          profile: { ...current.profile, gold: current.profile.gold - currentReward.cost },
+          history: [...current.history, {
+            id: uuid(), type: 'reward', date: dateKey(), createdAt: new Date().toISOString(), title: currentReward.title,
+            rewardId: currentReward.id, xp: 0, gold: -currentReward.cost,
+          }],
+        }
+      })
+      setToast(`Награда получена: ${reward.title}`)
+      return true
+    }
+
+    const updateProfile = (patch: Partial<Profile>) => {
+      setState((current) => current && ({ ...current, profile: { ...current.profile, ...patch } }))
+    }
+
+    const setTodayMode = (mode: 'list' | 'timeline') => {
+      setState((current) => current && ({ ...current, preferences: { ...current.preferences, todayMode: mode } }))
+    }
+
+    const exportBackup = async () => {
+      if (!window.lifeGame) {
+        const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' })
+        const url = URL.createObjectURL(blob)
+        const link = document.createElement('a')
+        link.href = url
+        link.download = `life-is-a-game-backup-${dateKey()}.json`
+        link.click()
+        URL.revokeObjectURL(url)
+        return link.download
+      }
+      const result = await window.lifeGame.exportBackup(state)
+      return result.canceled ? null : result.filePath ?? null
+    }
+
+    const importBackup = async () => {
+      if (!window.lifeGame) return false
+      const result = await window.lifeGame.importBackup()
+      if (result.canceled || !result.state) return false
+      setState(result.state)
+      setToast('Резервная копия восстановлена')
+      return true
+    }
+
+    return {
+      state, saveStatus, toast, dismissToast: () => setToast(null),
+      addQuest, updateQuest, deleteQuest, toggleQuest, setMainQuest,
+      addSkill, updateSkill, deleteSkill, moveSkill,
+      addReward, updateReward, deleteReward, redeemReward,
+      updateProfile, setTodayMode, exportBackup, importBackup,
+    }
+  }, [state, saveStatus, toast])
+
+  if (!value) return <div className="app-loading"><div className="loading-rune">✦</div><p>Загружаем приключение…</p></div>
+  return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>
+}
+
+function getProfileLevel(xp: number) {
+  let level = 1
+  let remaining = xp
+  let needed = 100
+  while (remaining >= needed) {
+    remaining -= needed
+    level += 1
+    needed = 100 + (level - 1) * 35
+  }
+  return level
+}
+
+export function useStore() {
+  const context = useContext(StoreContext)
+  if (!context) throw new Error('useStore должен использоваться внутри StoreProvider')
+  return context
+}
