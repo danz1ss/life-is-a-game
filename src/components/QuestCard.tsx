@@ -1,28 +1,49 @@
-import { Check, Clock3, Coins, Pencil, Star, Target, Trash2, Zap } from 'lucide-react'
-import type { ReactNode } from 'react'
-import { difficultyConfig, formatDuration, isQuestComplete } from '../lib/game'
+import { Check, Clock3, Coins, GripVertical, Pencil, Star, Target, Trash2, X, Zap } from 'lucide-react'
+import type { DragEvent, ReactNode } from 'react'
+import { difficultyConfig, formatDuration, isQuestComplete, isQuestSkipped } from '../lib/game'
 import type { Quest, Skill } from '../lib/types'
 
-export function QuestCard({ quest, skill, goalTitle, date, onToggle, onEdit, onDelete, onMakeMain, compact = false, badge, footer }: {
+export function QuestCard({ quest, skill, goalTitle, date, onToggle, onSkip, onEdit, onDelete, onMakeMain, onReorder, compact = false, badge, footer }: {
   quest: Quest
   skill?: Skill
   goalTitle?: string
   date: string
   onToggle?: () => void
+  onSkip?: () => void
   onEdit?: () => void
   onDelete?: () => void
   onMakeMain?: () => void
+  onReorder?: (sourceId: string, targetId: string, placement: 'before' | 'after') => void
   compact?: boolean
   badge?: { label: string; tone: 'danger' | 'muted' | 'success' | 'violet' }
   footer?: ReactNode
 }) {
   const complete = isQuestComplete(quest, date)
+  const skipped = isQuestSkipped(quest, date)
   const reward = difficultyConfig[quest.difficulty]
+  const startDrag = (event: DragEvent<HTMLSpanElement>) => {
+    event.dataTransfer.effectAllowed = 'move'
+    event.dataTransfer.setData('text/plain', quest.id)
+  }
+  const dropQuest = (event: DragEvent<HTMLElement>) => {
+    if (!onReorder) return
+    event.preventDefault()
+    const sourceId = event.dataTransfer.getData('text/plain')
+    const bounds = event.currentTarget.getBoundingClientRect()
+    const placement = event.clientY < bounds.top + bounds.height / 2 ? 'before' : 'after'
+    onReorder(sourceId, quest.id, placement)
+  }
   return (
-    <article className={`quest-card ${complete ? 'is-complete' : ''} ${compact ? 'quest-card--compact' : ''}`}>
-      <button className={`quest-check ${!onToggle ? 'quest-check--static' : ''}`} type="button" disabled={!onToggle} onClick={onToggle} aria-label={complete ? 'Вернуть квест' : 'Выполнить квест'}>
-        {complete && <Check size={17} strokeWidth={3} />}
-      </button>
+    <article className={`quest-card ${complete ? 'is-complete' : ''} ${skipped ? 'is-skipped' : ''} ${compact ? 'quest-card--compact' : ''}`} onDragOver={onReorder ? (event) => { event.preventDefault(); event.dataTransfer.dropEffect = 'move' } : undefined} onDrop={dropQuest}>
+      {onReorder && <span className="quest-drag-handle" draggable onDragStart={startDrag} title="Перетащить квест" aria-label="Перетащить квест"><GripVertical size={17} /></span>}
+      <div className="quest-result-actions">
+        <button className={`quest-check ${!onToggle ? 'quest-check--static' : ''}`} type="button" disabled={!onToggle} onClick={onToggle} aria-label={complete ? 'Вернуть квест' : 'Выполнить квест'} aria-pressed={complete}>
+          {complete && <Check size={17} strokeWidth={3} />}
+        </button>
+        {onSkip && <button className="quest-skip" type="button" onClick={onSkip} aria-label={skipped ? 'Снять отметку «не выполнено»' : quest.repeatDays.length > 0 ? 'Не выполнено сегодня' : 'Не выполнено — перенести на завтра'} aria-pressed={skipped} title={quest.repeatDays.length > 0 ? 'Не выполнено сегодня' : 'Не выполнено — перенести на завтра'}>
+          <X size={15} strokeWidth={2.5} />
+        </button>}
+      </div>
       <div className="quest-card__body">
         <div className="quest-card__topline">
           <h3>{quest.title}</h3>

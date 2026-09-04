@@ -32,7 +32,9 @@ export interface Quest {
   durationMinutes: number
   repeatDays: number[]
   isMain: boolean
+  order: number
   completedDates: string[]
+  skippedDates: string[]
   archivedAt: string | null
   createdAt: string
 }
@@ -76,7 +78,7 @@ export interface HistoryEvent {
 }
 
 export interface AppState {
-  version: 2
+  version: 3
   profile: Profile
   skills: Skill[]
   quests: Quest[]
@@ -88,7 +90,7 @@ export interface AppState {
   }
 }
 
-export type QuestDraft = Omit<Quest, 'id' | 'createdAt' | 'completedDates' | 'archivedAt'>
+export type QuestDraft = Omit<Quest, 'id' | 'createdAt' | 'order' | 'completedDates' | 'skippedDates' | 'archivedAt'>
 export type SkillDraft = Omit<Skill, 'id' | 'createdAt' | 'xp' | 'position'> & {
   position?: { x: number; y: number }
 }

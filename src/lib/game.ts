@@ -29,6 +29,12 @@ export function dateLabel(value: string) {
   return new Intl.DateTimeFormat('ru-RU', { day: 'numeric', month: 'long' }).format(new Date(`${value}T12:00:00`))
 }
 
+export function nextDateKey(value = dateKey()) {
+  const date = new Date(`${value}T12:00:00`)
+  date.setDate(date.getDate() + 1)
+  return dateKey(date)
+}
+
 export function longDateLabel(value = dateKey()) {
   return new Intl.DateTimeFormat('ru-RU', {
     weekday: 'long',
@@ -60,6 +66,7 @@ export function skillLevel(skill: Skill) {
 
 export function isQuestForDate(quest: Quest, value: string) {
   if (quest.archivedAt) return false
+  if (quest.skippedDates.includes(value)) return true
   const date = new Date(`${value}T12:00:00`)
   if (quest.repeatDays.length > 0) return quest.repeatDays.includes(date.getDay())
   if (quest.dueDate) return quest.dueDate === value
@@ -68,6 +75,10 @@ export function isQuestForDate(quest: Quest, value: string) {
 
 export function isQuestComplete(quest: Quest, value: string) {
   return quest.repeatDays.length > 0 ? quest.completedDates.includes(value) : quest.completedDates.length > 0
+}
+
+export function isQuestSkipped(quest: Quest, value: string) {
+  return quest.skippedDates.includes(value)
 }
 
 export function isQuestOverdue(quest: Quest, today = dateKey()) {
@@ -116,7 +127,7 @@ export function createInitialState(): AppState {
   const today = dateKey()
   const now = new Date().toISOString()
   return {
-    version: 2,
+    version: 3,
     profile: {
       name: 'Игрок',
       avatar: '⚔️',
@@ -135,9 +146,9 @@ export function createInitialState(): AppState {
       { id: 'programming', name: 'Программирование', description: 'Создание приложений и систем', icon: '</>', color: '#ffb45e', parentId: 'career', xp: 0, position: { x: 290, y: 380 }, requiredParentLevel: 1, createdAt: now },
     ],
     quests: [
-      { id: 'quest-project', title: 'Поработать над главным проектом', description: 'Сделать один конкретный шаг, который двигает проект вперёд.', difficulty: 'hard', skillId: 'programming', dueDate: today, scheduledTime: '10:00', durationMinutes: 90, repeatDays: [], isMain: true, completedDates: [], archivedAt: null, createdAt: now },
-      { id: 'quest-reading', title: 'Прочитать 20 страниц', description: '', difficulty: 'medium', skillId: 'reading', dueDate: today, scheduledTime: null, durationMinutes: 30, repeatDays: [], isMain: false, completedDates: [], archivedAt: null, createdAt: now },
-      { id: 'quest-walk', title: 'Прогулка или тренировка', description: '', difficulty: 'easy', skillId: 'sport', dueDate: today, scheduledTime: '18:30', durationMinutes: 30, repeatDays: [], isMain: false, completedDates: [], archivedAt: null, createdAt: now },
+      { id: 'quest-project', title: 'Поработать над главным проектом', description: 'Сделать один конкретный шаг, который двигает проект вперёд.', difficulty: 'hard', skillId: 'programming', dueDate: today, scheduledTime: '10:00', durationMinutes: 90, repeatDays: [], isMain: true, order: 0, completedDates: [], skippedDates: [], archivedAt: null, createdAt: now },
+      { id: 'quest-reading', title: 'Прочитать 20 страниц', description: '', difficulty: 'medium', skillId: 'reading', dueDate: today, scheduledTime: null, durationMinutes: 30, repeatDays: [], isMain: false, order: 1, completedDates: [], skippedDates: [], archivedAt: null, createdAt: now },
+      { id: 'quest-walk', title: 'Прогулка или тренировка', description: '', difficulty: 'easy', skillId: 'sport', dueDate: today, scheduledTime: '18:30', durationMinutes: 30, repeatDays: [], isMain: false, order: 2, completedDates: [], skippedDates: [], archivedAt: null, createdAt: now },
     ],
     goals: [],
     rewards: [
@@ -162,10 +173,15 @@ export function migrateState(value: unknown): AppState {
   if (!Array.isArray(stored.skills) || !Array.isArray(stored.quests)) return fallback
 
   return {
-    version: 2,
+    version: 3,
     profile: stored.profile ?? fallback.profile,
     skills: stored.skills,
-    quests: stored.quests.map((quest) => ({ ...quest, archivedAt: quest.archivedAt ?? null })) as Quest[],
+    quests: stored.quests.map((quest, index) => ({
+      ...quest,
+      order: typeof quest.order === 'number' ? quest.order : index,
+      skippedDates: Array.isArray(quest.skippedDates) ? quest.skippedDates : [],
+      archivedAt: quest.archivedAt ?? null,
+    })) as Quest[],
     goals: Array.isArray(stored.goals) ? stored.goals : [],
     rewards: Array.isArray(stored.rewards) ? stored.rewards : [],
     history: Array.isArray(stored.history) ? stored.history : [],

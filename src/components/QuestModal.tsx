@@ -4,9 +4,10 @@ import { dateKey, difficultyConfig, weekDays } from '../lib/game'
 import type { Difficulty, Quest, QuestDraft, Skill } from '../lib/types'
 import { Modal } from './Ui'
 
-export function QuestModal({ quest, skills, onSave, onClose }: {
+export function QuestModal({ quest, skills, initialIsMain = false, onSave, onClose }: {
   quest?: Quest | null
   skills: Skill[]
+  initialIsMain?: boolean
   onSave: (draft: QuestDraft) => void
   onClose: () => void
 }) {
@@ -29,8 +30,8 @@ export function QuestModal({ quest, skills, onSave, onClose }: {
     setScheduledTime(quest?.scheduledTime ?? '')
     setDurationMinutes(quest?.durationMinutes ?? 30)
     setRepeatDays(quest?.repeatDays ?? [])
-    setIsMain(quest?.isMain ?? false)
-  }, [quest])
+    setIsMain(quest?.isMain ?? initialIsMain)
+  }, [initialIsMain, quest])
 
   const submit = (event: FormEvent) => {
     event.preventDefault()

@@ -17,7 +17,18 @@ const navigation = [
 
 export function App() {
   const [page, setPage] = useState('today')
+  const [treeFocusSkillId, setTreeFocusSkillId] = useState<string | null>(null)
   const { state, saveStatus, toast, dismissToast } = useStore()
+
+  const navigate = (nextPage: string) => {
+    setTreeFocusSkillId(null)
+    setPage(nextPage)
+  }
+
+  const openSkill = (skillId: string) => {
+    setTreeFocusSkillId(skillId)
+    setPage('tree')
+  }
 
   useEffect(() => {
     if (!toast) return
@@ -28,12 +39,12 @@ export function App() {
   return (
     <div className="app-shell">
       <aside className="sidebar">
-        <div className="brand"><span className="brand-mark">✦</span><div><strong>Life is a Game</strong><small>Личная RPG</small></div></div>
+        <div className="brand"><BrandMark /><div><strong>Life is a Game</strong><small>YDN · Личная RPG</small></div></div>
         <nav className="main-nav">
           <span className="nav-label">Приключение</span>
           {navigation.map((item) => {
             const Icon = item.icon
-            return <button key={item.id} className={page === item.id ? 'is-active' : ''} onClick={() => setPage(item.id)}><Icon size={19} /><span>{item.label}</span>{item.id === 'rewards' && state.profile.gold > 0 && <em>{state.profile.gold}</em>}</button>
+            return <button key={item.id} className={page === item.id ? 'is-active' : ''} onClick={() => navigate(item.id)}><Icon size={19} /><span>{item.label}</span>{item.id === 'rewards' && state.profile.gold > 0 && <em>{state.profile.gold}</em>}</button>
           })}
         </nav>
         <div className="sidebar-bottom">
@@ -42,13 +53,34 @@ export function App() {
         </div>
       </aside>
       <main className="main-content">
-        {page === 'today' && <DashboardPage onNavigate={setPage} />}
-        {page === 'quests' && <QuestsPage onNavigate={setPage} />}
-        {page === 'tree' && <TreePage />}
+        {page === 'today' && <DashboardPage onNavigate={navigate} onOpenSkill={openSkill} />}
+        {page === 'quests' && <QuestsPage onNavigate={navigate} />}
+        {page === 'tree' && <TreePage initialSelectedId={treeFocusSkillId} />}
         {page === 'progress' && <ProgressPage />}
         {page === 'rewards' && <RewardsPage />}
       </main>
       {toast && <div className="game-toast"><span>✦</span><strong>{toast}</strong></div>}
     </div>
   )
+}
+
+function BrandMark() {
+  return <span className="brand-mark" aria-hidden="true">
+    <svg viewBox="0 0 64 72" role="img">
+      <defs>
+        <linearGradient id="ydn-mark-gradient" x1="8" y1="8" x2="58" y2="64" gradientUnits="userSpaceOnUse">
+          <stop stopColor="#5bd5e6" />
+          <stop offset="1" stopColor="#9b7cff" />
+        </linearGradient>
+      </defs>
+      <path
+        d="M12 10 32 43 52 10M32 43v21"
+        fill="none"
+        stroke="url(#ydn-mark-gradient)"
+        strokeWidth="7"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  </span>
 }

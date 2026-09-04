@@ -8,11 +8,11 @@ import { activeGoalForSkill, branchColor, dateLabel, goalCompletionReward, skill
 import { useStore } from '../lib/store'
 import type { Skill, SkillDraft, SkillGoal, SkillGoalDraft } from '../lib/types'
 
-export function TreePage() {
+export function TreePage({ initialSelectedId = null }: { initialSelectedId?: string | null }) {
   const { state, addSkill, updateSkill, deleteSkill, moveSkill, addGoal, updateGoal, deleteGoal, completeGoal } = useStore()
   const [modal, setModal] = useState<Skill | 'new' | null>(null)
   const [goalModal, setGoalModal] = useState<SkillGoal | 'new' | null>(null)
-  const [selectedId, setSelectedId] = useState<string | null>(null)
+  const [selectedId, setSelectedId] = useState<string | null>(initialSelectedId)
   const [branchId, setBranchId] = useState<string | null>(null)
   const rootSkills = state.skills.filter((skill) => !skill.parentId)
 
@@ -88,7 +88,7 @@ export function TreePage() {
       <ReactFlow nodes={nodes} edges={edges} onNodesChange={(changes: NodeChange[]) => setNodes((items) => applyNodeChanges(changes, items))} onNodeDragStop={(_event, node) => node.id !== 'player-root' && moveSkill(node.id, node.position)} onNodeClick={(_event, node) => node.id !== 'player-root' && setSelectedId(node.id)} fitView minZoom={0.35} maxZoom={1.6} colorMode="dark" proOptions={{ hideAttribution: true }}>
         <Background color="#26314a" gap={26} size={1} />
         <Controls showInteractive={false} />
-        <MiniMap pannable zoomable nodeColor={(node) => state.skills.find((skill) => skill.id === node.id)?.color ?? '#7c6cf2'} maskColor="rgba(6, 10, 19, .76)" />
+        {!selected && <MiniMap position="top-right" pannable zoomable nodeColor={(node) => state.skills.find((skill) => skill.id === node.id)?.color ?? '#7c6cf2'} maskColor="rgba(6, 10, 19, .76)" />}
       </ReactFlow>
       <div className="tree-hint"><Sparkles size={15} /> Колесо — масштаб · перетаскивание — перемещение карты</div>
       {selected && <SkillDetails

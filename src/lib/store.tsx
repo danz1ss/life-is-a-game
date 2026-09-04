@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
-import { createInitialState, dateKey, difficultyConfig, goalCompletionReward, isQuestComplete, migrateState } from './game'
+import { createInitialState, dateKey, difficultyConfig, goalCompletionReward, isQuestComplete, isQuestForDate, isQuestSkipped, migrateState, nextDateKey } from './game'
 import type { AppState, Profile, Quest, QuestDraft, Reward, RewardDraft, Skill, SkillDraft, SkillGoal, SkillGoalDraft } from './types'
 
 type SaveStatus = 'loading' | 'saved' | 'saving' | 'error'
@@ -15,6 +15,9 @@ interface StoreValue {
   archiveQuest: (id: string) => void
   restoreQuest: (id: string) => void
   toggleQuest: (id: string, onDate?: string) => void
+  skipQuest: (id: string, onDate?: string) => void
+  closeDay: (onDate?: string) => void
+  reorderQuest: (sourceId: string, targetId: string, placement: 'before' | 'after') => void
   setMainQuest: (id: string) => void
   addSkill: (draft: SkillDraft) => void
   updateSkill: (id: string, patch: Partial<Skill>) => void
@@ -109,7 +112,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         ...current,
         quests: [
           ...current.quests.map((quest) => draft.isMain ? { ...quest, isMain: false } : quest),
-          { ...draft, id: uuid(), completedDates: [], archivedAt: null, createdAt: new Date().toISOString() },
+          { ...draft, id: uuid(), order: Math.max(-1, ...current.quests.map((quest) => quest.order)) + 1, completedDates: [], skippedDates: [], archivedAt: null, createdAt: new Date().toISOString() },
         ],
       }))
     }
@@ -182,13 +185,111 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           quests: current.quests.map((item) => item.id === id
             ? {
               ...item,
+              dueDate: complete && item.repeatDays.length === 0 ? onDate : item.dueDate,
               completedDates: complete
                 ? (item.repeatDays.length > 0 ? [...item.completedDates, onDate] : [onDate])
                 : (item.repeatDays.length > 0 ? item.completedDates.filter((date) => date !== completionDate) : []),
+              skippedDates: complete ? item.skippedDates.filter((date) => date !== onDate) : item.skippedDates,
             }
             : item),
           history,
         }
+      })
+    }
+
+    const skipQuest = (id: string, onDate = dateKey()) => {
+      const quest = state.quests.find((item) => item.id === id)
+      if (!quest) return
+      const skipped = isQuestSkipped(quest, onDate)
+      const complete = isQuestComplete(quest, onDate)
+      const tomorrow = nextDateKey(onDate)
+
+      setState((current) => {
+        if (!current) return current
+        const currentQuest = current.quests.find((item) => item.id === id)
+        if (!currentQuest) return current
+
+        let history = current.history
+        let profile = current.profile
+        let skills = current.skills
+        if (complete) {
+          const completionDate = currentQuest.repeatDays.length > 0 ? onDate : (currentQuest.completedDates[0] ?? onDate)
+          const eventIndex = current.history.findIndex((event) => event.type === 'quest' && event.questId === id && event.date === completionDate)
+          history = eventIndex < 0 ? current.history : current.history.filter((_, index) => index !== eventIndex)
+          const reward = difficultyConfig[currentQuest.difficulty]
+          profile = {
+            ...current.profile,
+            totalXp: Math.max(0, current.profile.totalXp - reward.xp),
+            gold: Math.max(0, current.profile.gold - reward.gold),
+            activeDays: activeDaysFromHistory(history),
+          }
+          skills = current.skills.map((skill) => skill.id === currentQuest.skillId
+            ? { ...skill, xp: Math.max(0, skill.xp - reward.xp) }
+            : skill)
+        }
+
+        return {
+          ...current,
+          profile,
+          skills,
+          history,
+          quests: current.quests.map((item) => item.id === id
+            ? {
+              ...item,
+              dueDate: item.repeatDays.length > 0 ? item.dueDate : (skipped ? onDate : tomorrow),
+              completedDates: complete
+                ? (item.repeatDays.length > 0 ? item.completedDates.filter((date) => date !== onDate) : [])
+                : item.completedDates,
+              skippedDates: skipped
+                ? item.skippedDates.filter((date) => date !== onDate)
+                : [...item.skippedDates.filter((date) => date !== onDate), onDate],
+            }
+            : item),
+        }
+      })
+
+      if (skipped) setToast('Квест снова ожидает отметки')
+      else if (quest.repeatDays.length > 0) setToast('Повтор отмечен как пропущенный')
+      else setToast(`Не выполнено · квест перенесён на ${nextDateKey(onDate).split('-').reverse().slice(0, 2).join('.')}`)
+    }
+
+    const closeDay = (onDate = dateKey()) => {
+      const pending = state.quests.filter((quest) => isQuestForDate(quest, onDate)
+        && !isQuestComplete(quest, onDate)
+        && !isQuestSkipped(quest, onDate))
+      if (pending.length === 0) {
+        setToast('Все квесты дня уже разобраны')
+        return
+      }
+
+      const ids = new Set(pending.map((quest) => quest.id))
+      const tomorrow = nextDateKey(onDate)
+      const rescheduled = pending.filter((quest) => quest.repeatDays.length === 0).length
+      const skipped = pending.length - rescheduled
+      setState((current) => current && ({
+        ...current,
+        quests: current.quests.map((quest) => ids.has(quest.id)
+          ? {
+            ...quest,
+            dueDate: quest.repeatDays.length > 0 ? quest.dueDate : tomorrow,
+            skippedDates: [...quest.skippedDates.filter((date) => date !== onDate), onDate],
+          }
+          : quest),
+      }))
+      setToast(`День закрыт · перенесено: ${rescheduled} · пропущено повторов: ${skipped}`)
+    }
+
+    const reorderQuest = (sourceId: string, targetId: string, placement: 'before' | 'after') => {
+      if (sourceId === targetId) return
+      setState((current) => {
+        if (!current) return current
+        const ordered = [...current.quests].sort((a, b) => a.order - b.order)
+        const sourceIndex = ordered.findIndex((quest) => quest.id === sourceId)
+        if (sourceIndex < 0 || !ordered.some((quest) => quest.id === targetId)) return current
+        const [source] = ordered.splice(sourceIndex, 1)
+        const targetIndex = ordered.findIndex((quest) => quest.id === targetId)
+        ordered.splice(targetIndex + (placement === 'after' ? 1 : 0), 0, source)
+        return { ...current, quests: ordered.map((quest, order) => ({ ...quest, order })) }
       })
     }
 
@@ -197,6 +298,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         ...current,
         quests: current.quests.map((quest) => ({ ...quest, isMain: quest.id === id })),
       }))
+      setToast('Главный квест дня выбран')
     }
 
     const addSkill = (draft: SkillDraft) => {
@@ -373,7 +475,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
     return {
       state, saveStatus, toast, dismissToast: () => setToast(null),
-      addQuest, updateQuest, deleteQuest, archiveQuest, restoreQuest, toggleQuest, setMainQuest,
+      addQuest, updateQuest, deleteQuest, archiveQuest, restoreQuest, toggleQuest, skipQuest, closeDay, reorderQuest, setMainQuest,
       addSkill, updateSkill, deleteSkill, moveSkill,
       addGoal, updateGoal, deleteGoal, completeGoal,
       addReward, updateReward, deleteReward, redeemReward,

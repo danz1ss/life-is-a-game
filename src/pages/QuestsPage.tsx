@@ -3,14 +3,14 @@ import { useMemo, useState, type ReactNode } from 'react'
 import { QuestCard } from '../components/QuestCard'
 import { QuestModal } from '../components/QuestModal'
 import { EmptyState, PageHeader } from '../components/Ui'
-import { activeGoalForSkill, dateKey, dateLabel, isQuestForDate, isQuestOverdue, weekDays } from '../lib/game'
+import { activeGoalForSkill, dateKey, dateLabel, isQuestForDate, isQuestOverdue, isQuestSkipped, weekDays } from '../lib/game'
 import { useStore } from '../lib/store'
 import type { Quest, QuestDraft } from '../lib/types'
 
 type QuestView = 'plan' | 'recurring' | 'archive'
 
 export function QuestsPage({ onNavigate }: { onNavigate: (page: string) => void }) {
-  const { state, addQuest, updateQuest, deleteQuest, archiveQuest, restoreQuest, toggleQuest, setMainQuest } = useStore()
+  const { state, addQuest, updateQuest, deleteQuest, archiveQuest, restoreQuest, toggleQuest, reorderQuest, setMainQuest } = useStore()
   const [modal, setModal] = useState<Quest | 'new' | null>(null)
   const [view, setView] = useState<QuestView>('plan')
   const [skillFilter, setSkillFilter] = useState('')
@@ -21,10 +21,11 @@ export function QuestsPage({ onNavigate }: { onNavigate: (page: string) => void 
     if (query && !`${quest.title} ${quest.description}`.toLowerCase().includes(query.toLowerCase())) return false
     if (skillFilter && quest.skillId !== skillFilter) return false
     return true
-  }), [query, skillFilter, state.quests])
+  }).sort((a, b) => a.order - b.order), [query, skillFilter, state.quests])
 
   const todayQuests = state.quests.filter((quest) => isQuestForDate(quest, today))
   const todayCompleted = todayQuests.filter((quest) => quest.completedDates.includes(today) || (quest.repeatDays.length === 0 && quest.completedDates.length > 0)).length
+  const todaySkipped = todayQuests.filter((quest) => isQuestSkipped(quest, today)).length
   const overdue = filtered.filter((quest) => isQuestOverdue(quest, today))
   const upcoming = filtered.filter((quest) => !quest.archivedAt && quest.repeatDays.length === 0 && quest.completedDates.length === 0 && Boolean(quest.dueDate && quest.dueDate > today))
   const undated = filtered.filter((quest) => !quest.archivedAt && quest.repeatDays.length === 0 && quest.completedDates.length === 0 && !quest.dueDate)
@@ -42,10 +43,11 @@ export function QuestsPage({ onNavigate }: { onNavigate: (page: string) => void 
     quest={quest}
     skill={state.skills.find((skill) => skill.id === quest.skillId)}
     goalTitle={quest.skillId ? activeGoalForSkill(state.goals, quest.skillId)?.title : undefined}
-    date={quest.completedDates[0] ?? today}
+    date={quest.repeatDays.length > 0 ? today : quest.dueDate ?? quest.completedDates[0] ?? today}
     onToggle={allowToggle ? () => toggleQuest(quest.id, today) : undefined}
     onEdit={() => setModal(quest)}
     onMakeMain={!quest.archivedAt && quest.completedDates.length === 0 ? () => setMainQuest(quest.id) : undefined}
+    onReorder={reorderQuest}
     onDelete={() => { if (window.confirm(`Удалить квест «${quest.title}»? Заработанный ранее опыт сохранится.`)) deleteQuest(quest.id) }}
     badge={badge}
     footer={footer}
@@ -56,7 +58,7 @@ export function QuestsPage({ onNavigate }: { onNavigate: (page: string) => void 
 
     <button className="today-quest-summary panel" onClick={() => onNavigate('today')}>
       <span className="today-quest-summary__icon"><CheckCircle2 size={20} /></span>
-      <span><strong>Сегодня</strong><small>{todayQuests.length === 0 ? 'На сегодня ничего не запланировано' : `Выполнено ${todayCompleted} из ${todayQuests.length}`}</small></span>
+      <span><strong>Сегодня</strong><small>{todayQuests.length === 0 ? 'На сегодня ничего не запланировано' : `Выполнено ${todayCompleted} · не выполнено ${todaySkipped} · всего ${todayQuests.length}`}</small></span>
       <em>{todayQuests.length}</em><ChevronRight size={18} />
     </button>
 
