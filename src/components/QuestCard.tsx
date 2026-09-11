@@ -1,4 +1,6 @@
-import { Check, Clock3, Coins, GripVertical, Pencil, Star, Target, Trash2, X, Zap } from 'lucide-react'
+import { Check, Clock3, Coins, GripVertical, Star, Target, X, Zap } from 'lucide-react'
+import { QuestActions } from './QuestActions'
+import { SkillIcon } from './SkillIcon'
 import type { DragEvent, ReactNode } from 'react'
 import { difficultyConfig, formatDuration, isQuestComplete, isQuestSkipped } from '../lib/game'
 import type { Quest, Skill } from '../lib/types'
@@ -38,23 +40,24 @@ export function QuestCard({ quest, skill, goalTitle, date, onToggle, onSkip, onE
       {onReorder && <span className="quest-drag-handle" draggable onDragStart={startDrag} title="Перетащить квест" aria-label="Перетащить квест"><GripVertical size={17} /></span>}
       <div className="quest-result-actions">
         <button className={`quest-check ${!onToggle ? 'quest-check--static' : ''}`} type="button" disabled={!onToggle} onClick={onToggle} aria-label={complete ? 'Вернуть квест' : 'Выполнить квест'} aria-pressed={complete}>
-          {complete && <Check size={17} strokeWidth={3} />}
+          <Check size={16} strokeWidth={2} />
         </button>
         {onSkip && <button className="quest-skip" type="button" onClick={onSkip} aria-label={skipped ? 'Снять отметку «не выполнено»' : quest.repeatDays.length > 0 ? 'Не выполнено сегодня' : 'Не выполнено — перенести на завтра'} aria-pressed={skipped} title={quest.repeatDays.length > 0 ? 'Не выполнено сегодня' : 'Не выполнено — перенести на завтра'}>
-          <X size={15} strokeWidth={2.5} />
+          <X size={16} strokeWidth={2} />
         </button>}
       </div>
       <div className="quest-card__body">
         <div className="quest-card__topline">
           <h3>{quest.title}</h3>
           {quest.isMain && <span className="main-badge"><Star size={11} fill="currentColor" /> Главный</span>}
+          {(complete || skipped) && <span className="quest-result-label">{complete ? 'Выполнено' : 'Не выполнено'}</span>}
         </div>
         {quest.description && <p className={compact ? 'quest-description--compact' : ''}>{quest.description}</p>}
         <div className="quest-meta">
           {badge && <span className={`quest-status quest-status--${badge.tone}`}>{badge.label}</span>}
           {quest.scheduledTime && <span><Clock3 size={13} /> {quest.scheduledTime}</span>}
           <span><Clock3 size={13} /> {formatDuration(quest.durationMinutes)}</span>
-          {skill && <span className="skill-pill" style={{ color: skill.color }}><i style={{ background: skill.color }} />{skill.name}</span>}
+          {skill && <span className="skill-pill" data-skill-id={skill.id} style={{ color: skill.color }}><SkillIcon icon={skill.icon} size={14} />{skill.name}</span>}
           {goalTitle && <span className="goal-pill"><Target size={12} />{goalTitle}</span>}
           <span><Zap size={13} /> {reward.xp} XP</span>
           <span><Coins size={13} /> {reward.gold}</span>
@@ -62,11 +65,7 @@ export function QuestCard({ quest, skill, goalTitle, date, onToggle, onSkip, onE
         {footer && <div className="quest-card__footer">{footer}</div>}
       </div>
       {(onEdit || onDelete || onMakeMain) && (
-        <div className="quest-actions">
-          {onMakeMain && !quest.isMain && <button className="icon-button" type="button" onClick={onMakeMain} title="Сделать главным"><Star size={16} /></button>}
-          {onEdit && <button className="icon-button" type="button" onClick={onEdit} title="Редактировать"><Pencil size={16} /></button>}
-          {onDelete && <button className="icon-button icon-button--danger" type="button" onClick={onDelete} title="Удалить"><Trash2 size={16} /></button>}
-        </div>
+        <QuestActions title={quest.title} onEdit={onEdit} onDelete={onDelete} onMakeMain={!quest.isMain ? onMakeMain : undefined} />
       )}
     </article>
   )

@@ -1,5 +1,6 @@
 import { Activity, CheckCircle2, Flame, Sparkles, TrendingUp, Zap } from 'lucide-react'
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
+import { SkillIcon } from '../components/SkillIcon'
 import { PageHeader, ProgressBar } from '../components/Ui'
 import { calculateStreak, dateKey, levelProgress, skillLevel } from '../lib/game'
 import { useStore } from '../lib/store'
@@ -35,12 +36,12 @@ export function ProgressPage() {
         <div className="chart-wrap">
           <ResponsiveContainer width="100%" height="100%">
             <AreaChart data={chartData} margin={{ top: 16, right: 10, left: -20, bottom: 0 }}>
-              <defs><linearGradient id="xpGradient" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#8f7cf7" stopOpacity={0.42}/><stop offset="100%" stopColor="#8f7cf7" stopOpacity={0}/></linearGradient></defs>
-              <CartesianGrid stroke="#202a40" strokeDasharray="4 6" vertical={false} />
-              <XAxis dataKey="date" stroke="#667089" tickLine={false} axisLine={false} fontSize={11} />
-              <YAxis stroke="#667089" tickLine={false} axisLine={false} fontSize={11} allowDecimals={false} />
-              <Tooltip contentStyle={{ background: '#111829', border: '1px solid #2b3550', borderRadius: 12 }} labelStyle={{ color: '#99a4bd' }} />
-              <Area type="monotone" dataKey="xp" stroke="#9b8cff" strokeWidth={2.5} fill="url(#xpGradient)" />
+              <defs><linearGradient id="xpGradient" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="var(--accent)" stopOpacity={0.42}/><stop offset="100%" stopColor="var(--accent)" stopOpacity={0}/></linearGradient></defs>
+              <CartesianGrid stroke="var(--line-soft)" strokeDasharray="4 6" vertical={false} />
+              <XAxis dataKey="date" stroke="var(--muted-2)" tickLine={false} axisLine={false} fontSize={11} />
+              <YAxis stroke="var(--muted-2)" tickLine={false} axisLine={false} fontSize={11} allowDecimals={false} />
+              <Tooltip contentStyle={{ background: 'var(--panel)', border: '1px solid var(--line)', borderRadius: 12 }} labelStyle={{ color: 'var(--muted)' }} />
+              <Area type="monotone" dataKey="xp" stroke="var(--accent)" strokeWidth={2.5} fill="url(#xpGradient)" />
             </AreaChart>
           </ResponsiveContainer>
         </div>
@@ -49,7 +50,7 @@ export function ProgressPage() {
         <div className="panel-title"><span><Sparkles size={17} /> Навыки</span><small>{state.skills.length} всего</small></div>
         <div className="ranking-list">{rankedSkills.map((skill, index) => {
           const progress = skillLevel(skill)
-          return <div className="ranking-row" key={skill.id}><b>{String(index + 1).padStart(2, '0')}</b><span className="ranking-row__icon" style={{ color: skill.color, background: `${skill.color}18` }}>{skill.icon}</span><div><span><strong>{skill.name}</strong><small>Ур. {progress.level}</small></span><ProgressBar value={progress.percent} color={skill.color} compact /></div><em>{skill.xp} XP</em></div>
+          return <div className="ranking-row" key={skill.id}><b>{String(index + 1).padStart(2, '0')}</b><span className="ranking-row__icon" style={{ color: skill.color, background: `${skill.color}18` }}><SkillIcon icon={skill.icon} /></span><div><span><strong>{skill.name}</strong><small>Ур. {progress.level}</small></span><ProgressBar value={progress.percent} color={skill.color} compact /></div><em>{skill.xp} XP</em></div>
         })}</div>
       </article>
     </section>

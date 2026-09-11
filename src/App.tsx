@@ -1,5 +1,8 @@
-import { Check, CloudOff, Coins, GitBranch, LayoutDashboard, ListChecks, Save, TrendingUp } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { Check, ChevronRight, CloudOff, Coins, GitBranch, LayoutDashboard, ListChecks, Palette, Save, TrendingUp, Trash2, Undo2, X } from 'lucide-react'
+import { useCallback, useEffect, useState } from 'react'
+import { AppearanceModal } from './components/AppearanceModal'
+import { backgroundThemes } from './lib/appearance'
+import './backgrounds.css'
 import { useStore } from './lib/store'
 import { DashboardPage } from './pages/DashboardPage'
 import { ProgressPage } from './pages/ProgressPage'
@@ -18,7 +21,9 @@ const navigation = [
 export function App() {
   const [page, setPage] = useState('today')
   const [treeFocusSkillId, setTreeFocusSkillId] = useState<string | null>(null)
-  const { state, saveStatus, toast, dismissToast } = useStore()
+  const [appearanceOpen, setAppearanceOpen] = useState(false)
+  const closeAppearance = useCallback(() => setAppearanceOpen(false), [])
+  const { state, saveStatus, toast, dismissToast, deletedQuest, undoDeleteQuest, dismissDeletedQuests, setBackground } = useStore()
 
   const navigate = (nextPage: string) => {
     setTreeFocusSkillId(null)
@@ -37,7 +42,7 @@ export function App() {
   }, [dismissToast, toast])
 
   return (
-    <div className="app-shell">
+    <div className="app-shell" data-background={state.preferences.background}>
       <aside className="sidebar">
         <div className="brand"><BrandMark /><div><strong>Life is a Game</strong><small>YDN · Личная RPG</small></div></div>
         <nav className="main-nav">
@@ -48,6 +53,9 @@ export function App() {
           })}
         </nav>
         <div className="sidebar-bottom">
+          <button className="appearance-button" onClick={() => setAppearanceOpen(true)} aria-haspopup="dialog">
+            <Palette size={18} /><span>Оформление<small>{backgroundThemes.find((theme) => theme.id === state.preferences.background)?.name}</small></span><ChevronRight size={15} />
+          </button>
           <div className="offline-badge"><CloudOff size={15} /><span><strong>Полностью локально</strong><small>Сетевые запросы заблокированы</small></span></div>
           <div className={`save-state save-state--${saveStatus}`}>{saveStatus === 'saving' ? <Save size={14} /> : <Check size={14} />} {saveStatus === 'saving' ? 'Сохраняется…' : saveStatus === 'error' ? 'Ошибка сохранения' : 'Все изменения сохранены'}</div>
         </div>
@@ -59,7 +67,14 @@ export function App() {
         {page === 'progress' && <ProgressPage />}
         {page === 'rewards' && <RewardsPage />}
       </main>
+      {appearanceOpen && <AppearanceModal selected={state.preferences.background} onChange={setBackground} onClose={closeAppearance} />}
       {toast && <div className="game-toast"><span>✦</span><strong>{toast}</strong></div>}
+      {deletedQuest && <div className={`delete-toast ${toast ? 'delete-toast--raised' : ''}`}>
+        <Trash2 size={18} />
+        <div role="status"><strong>Квест удалён</strong><span title={deletedQuest.title}>{deletedQuest.title}</span><small>Заработанные XP и золото сохранены</small></div>
+        <button className="button button--secondary" type="button" onClick={undoDeleteQuest}><Undo2 size={15} /> Отменить</button>
+        <button className="icon-button" type="button" onClick={dismissDeletedQuests} aria-label="Закрыть уведомление об удалении"><X size={17} /></button>
+      </div>}
     </div>
   )
 }
@@ -69,8 +84,8 @@ function BrandMark() {
     <svg viewBox="0 0 64 72" role="img">
       <defs>
         <linearGradient id="ydn-mark-gradient" x1="8" y1="8" x2="58" y2="64" gradientUnits="userSpaceOnUse">
-          <stop stopColor="#5bd5e6" />
-          <stop offset="1" stopColor="#9b7cff" />
+          <stop stopColor="var(--accent-bright)" />
+          <stop offset="1" stopColor="var(--accent)" />
         </linearGradient>
       </defs>
       <path

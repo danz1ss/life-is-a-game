@@ -1,5 +1,6 @@
-import { CalendarDays, CheckCircle2, ChevronRight, CircleAlert, CircleX, Clock3, Coins, Flame, List, Plus, Sparkles, Star, Target, Timeline, X, Zap } from 'lucide-react'
+import { CalendarDays, CheckCircle2, ChevronRight, CircleAlert, CircleX, Clock3, Coins, Flame, List, Pencil, Plus, Sparkles, Star, Swords, Target, Timeline, X, Zap } from 'lucide-react'
 import { useMemo, useState } from 'react'
+import { SkillIcon } from '../components/SkillIcon'
 import { QuestCard } from '../components/QuestCard'
 import { QuestModal } from '../components/QuestModal'
 import { EmptyState, Modal, ProgressBar } from '../components/Ui'
@@ -8,7 +9,7 @@ import { useStore } from '../lib/store'
 import type { Quest, QuestDraft, Skill } from '../lib/types'
 
 export function DashboardPage({ onNavigate, onOpenSkill }: { onNavigate: (page: string) => void; onOpenSkill: (skillId: string) => void }) {
-  const { state, addQuest, updateQuest, toggleQuest, skipQuest, closeDay, reorderQuest, setMainQuest, setTodayMode } = useStore()
+  const { state, addQuest, updateQuest, deleteQuest, toggleQuest, skipQuest, closeDay, reorderQuest, setMainQuest, setTodayMode } = useStore()
   const [questModal, setQuestModal] = useState<Quest | 'new' | null>(null)
   const [mainQuestPickerOpen, setMainQuestPickerOpen] = useState(false)
   const [newQuestAsMain, setNewQuestAsMain] = useState(false)
@@ -56,23 +57,23 @@ export function DashboardPage({ onNavigate, onOpenSkill }: { onNavigate: (page: 
       <section className="dashboard-grid">
         <article className="panel main-quest-panel">
           <div className="panel-title"><span><Star size={16} fill="currentColor" /> Главный квест дня</span>{mainQuest && <span className="main-quest-panel__actions"><button className="text-button" onClick={() => setMainQuestPickerOpen(true)}>Сменить</button><button className="text-button text-button--muted" onClick={() => setQuestModal(mainQuest)}>Изменить</button></span>}</div>
-          {mainQuest ? <MainQuest quest={mainQuest} onToggle={() => toggleQuest(mainQuest.id, today)} skillName={state.skills.find((skill) => skill.id === mainQuest.skillId)?.name} goalTitle={mainQuest.skillId ? activeGoalForSkill(state.goals, mainQuest.skillId)?.title : undefined} /> : (
+          {mainQuest ? <MainQuest quest={mainQuest} onToggle={() => toggleQuest(mainQuest.id, today)} skill={state.skills.find((skill) => skill.id === mainQuest.skillId)} goalTitle={mainQuest.skillId ? activeGoalForSkill(state.goals, mainQuest.skillId)?.title : undefined} /> : (
             <EmptyState icon="✦" title="Выберите главный квест" text="Отметьте самую важную задачу дня — она будет всегда перед глазами." action={todayQuests.length > 0 ? <button className="button button--secondary" onClick={() => setMainQuestPickerOpen(true)}>Выбрать из сегодняшних</button> : <button className="button button--secondary" onClick={() => openNewQuest(true)}><Plus size={16} /> Создать на сегодня</button>} />
           )}
         </article>
 
         <article className="panel hero-panel">
           <div className="hero-card__top">
-            <div className="avatar-orb">{state.profile.avatar}</div>
+            <div className="avatar-orb">{['⚔', '⚔️'].includes(state.profile.avatar) ? <Swords size={26} aria-hidden="true" /> : state.profile.avatar}</div>
             <div><span className="eyebrow">Персонаж</span><h2>{state.profile.name}</h2></div>
             <span className="level-medallion">{profileLevel.level}</span>
           </div>
           <div className="level-line"><span>Уровень {profileLevel.level}</span><span>{profileLevel.current} / {profileLevel.needed} XP</span></div>
-          <ProgressBar value={profileLevel.percent} color="linear-gradient(90deg, #7c6cf2, #b18cff)" />
+          <ProgressBar value={profileLevel.percent} color="linear-gradient(90deg, #64bef5, #91dcff)" />
           <div className="hero-stats">
-            <div><Coins size={18} /><strong>{state.profile.gold}</strong><span>золота</span></div>
-            <div><Flame size={18} /><strong>{calculateStreak(state.profile.activeDays)}</strong><span>дней подряд</span></div>
-            <div><Zap size={18} /><strong>{state.profile.totalXp}</strong><span>всего XP</span></div>
+            <div><span className="hero-stat__value"><Coins size={18} /><strong>{state.profile.gold}</strong></span><span className="hero-stat__label">золота</span></div>
+            <div><span className="hero-stat__value"><Flame size={18} /><strong>{calculateStreak(state.profile.activeDays)}</strong></span><span className="hero-stat__label">дней подряд</span></div>
+            <div><span className="hero-stat__value"><Zap size={18} /><strong>{state.profile.totalXp}</strong></span><span className="hero-stat__label">всего XP</span></div>
           </div>
           <button className="panel-link" onClick={() => onNavigate('progress')}>Открыть прогресс <ChevronRight size={17} /></button>
         </article>
@@ -90,8 +91,8 @@ export function DashboardPage({ onNavigate, onOpenSkill }: { onNavigate: (page: 
             <button className="button button--secondary" type="button" onClick={() => closeDay(today)}>Закрыть день</button>
           </div> : todayQuests.length > 0 && <div className="day-review-bar day-review-bar--done"><CheckCircle2 size={18} /><div><strong>Все квесты разобраны</strong><small>Можно спокойно завершать день.</small></div></div>}
           {todayQuests.length === 0 ? <EmptyState icon="☀" title="Свободный день" text="На сегодня ещё нет квестов." /> : state.preferences.todayMode === 'list' ? (
-            <div className="quest-list">{todayQuests.map((quest) => <QuestCard key={quest.id} quest={quest} skill={state.skills.find((skill) => skill.id === quest.skillId)} goalTitle={quest.skillId ? activeGoalForSkill(state.goals, quest.skillId)?.title : undefined} date={today} onToggle={() => toggleQuest(quest.id, today)} onSkip={() => skipQuest(quest.id, today)} onEdit={() => setQuestModal(quest)} onMakeMain={!isQuestComplete(quest, today) && !isQuestSkipped(quest, today) ? () => setMainQuest(quest.id) : undefined} onReorder={reorderQuest} compact />)}</div>
-          ) : <DayTimeline quests={todayQuests} date={today} onToggle={(id) => toggleQuest(id, today)} onSkip={(id) => skipQuest(id, today)} />}
+            <div className="quest-list">{todayQuests.map((quest) => <QuestCard key={quest.id} quest={quest} skill={state.skills.find((skill) => skill.id === quest.skillId)} goalTitle={quest.skillId ? activeGoalForSkill(state.goals, quest.skillId)?.title : undefined} date={today} onToggle={() => toggleQuest(quest.id, today)} onSkip={() => skipQuest(quest.id, today)} onEdit={() => setQuestModal(quest)} onDelete={() => deleteQuest(quest.id)} onMakeMain={!isQuestComplete(quest, today) && !isQuestSkipped(quest, today) ? () => setMainQuest(quest.id) : undefined} onReorder={reorderQuest} compact />)}</div>
+          ) : <DayTimeline quests={todayQuests} onEdit={setQuestModal} date={today} onToggle={(id) => toggleQuest(id, today)} onSkip={(id) => skipQuest(id, today)} />}
         </article>
 
         <div className="dashboard-side-stack">
@@ -102,7 +103,7 @@ export function DashboardPage({ onNavigate, onOpenSkill }: { onNavigate: (page: 
                 const progress = skillLevel(skill)
                 const todayXp = state.history.filter((event) => event.type === 'quest' && event.date === today && event.skillId === skill.id).reduce((sum, event) => sum + event.xp, 0)
                 return <button key={skill.id} className="skill-summary" onClick={() => onOpenSkill(skill.id)}>
-                  <span className="skill-summary__icon" style={{ color: skill.color, background: `${skill.color}18` }}>{skill.icon}</span>
+                  <span className="skill-summary__icon" style={{ color: skill.color, background: `${skill.color}18` }}><SkillIcon icon={skill.icon} /></span>
                   <span className="skill-summary__body"><span><strong>{skill.name}</strong><small>Ур. {progress.level}</small></span><ProgressBar value={progress.percent} color={skill.color} compact /></span>
                   {todayXp > 0 && <em>+{todayXp}</em>}
                 </button>
@@ -121,7 +122,7 @@ export function DashboardPage({ onNavigate, onOpenSkill }: { onNavigate: (page: 
                   <span className="goal-summary__icon" style={{ color: skill.color, background: `${skill.color}18` }}><Target size={17} /></span>
                   <span className="goal-summary__body">
                     <span className="goal-summary__top"><strong>{goal.title}</strong><em>{goal.progress}%</em></span>
-                    <span className="goal-summary__meta"><span style={{ color: skill.color }}>{skill.icon} {skill.name}</span>{goal.status === 'paused' ? <span>На паузе</span> : goal.targetDate && <span>до {dateLabel(goal.targetDate)}</span>}</span>
+                    <span className="goal-summary__meta"><span style={{ color: skill.color }}><SkillIcon icon={skill.icon} size={13} /> {skill.name}</span>{goal.status === 'paused' ? <span>На паузе</span> : goal.targetDate && <span>до {dateLabel(goal.targetDate)}</span>}</span>
                     <ProgressBar value={goal.progress} color={skill.color} compact />
                   </span>
                   <ChevronRight size={16} />
@@ -133,7 +134,7 @@ export function DashboardPage({ onNavigate, onOpenSkill }: { onNavigate: (page: 
       </section>
 
       {mainQuestPickerOpen && <MainQuestPicker quests={todayQuests} skills={state.skills} selectedId={mainQuest?.id ?? null} date={today} onSelect={(id) => { setMainQuest(id); setMainQuestPickerOpen(false) }} onCreate={() => { setMainQuestPickerOpen(false); openNewQuest(true) }} onClose={() => setMainQuestPickerOpen(false)} />}
-      {questModal && <QuestModal quest={questModal === 'new' ? null : questModal} skills={state.skills} initialIsMain={questModal === 'new' && newQuestAsMain} onSave={saveQuest} onClose={() => { setQuestModal(null); setNewQuestAsMain(false) }} />}
+      {questModal && <QuestModal quest={questModal === 'new' ? null : questModal} skills={state.skills} initialIsMain={questModal === 'new' && newQuestAsMain} onSave={saveQuest} onDelete={questModal !== 'new' ? () => { deleteQuest(questModal.id); setQuestModal(null) } : undefined} onClose={() => { setQuestModal(null); setNewQuestAsMain(false) }} />}
     </div>
   )
 }
@@ -169,7 +170,7 @@ function MainQuestPicker({ quests, skills, selectedId, date, onSelect, onCreate,
   </Modal>
 }
 
-function MainQuest({ quest, skillName, goalTitle, onToggle }: { quest: Quest; skillName?: string; goalTitle?: string; onToggle: () => void }) {
+function MainQuest({ quest, skill, goalTitle, onToggle }: { quest: Quest; skill?: Skill; goalTitle?: string; onToggle: () => void }) {
   const reward = difficultyConfig[quest.difficulty]
   const today = dateKey()
   const complete = isQuestComplete(quest, today)
@@ -184,7 +185,7 @@ function MainQuest({ quest, skillName, goalTitle, onToggle }: { quest: Quest; sk
         <div className="main-quest__meta">
           {quest.scheduledTime && <span><Clock3 size={14} /> {quest.scheduledTime}</span>}
           <span><Clock3 size={14} /> {formatDuration(quest.durationMinutes)}</span>
-          {skillName && <span><Sparkles size={14} /> {skillName}</span>}
+          {skill && <span className="skill-pill" data-skill-id={skill.id} style={{ color: skill.color }}><SkillIcon icon={skill.icon} size={14} /> {skill.name}</span>}
           {goalTitle && <span><Target size={14} /> {goalTitle}</span>}
           <span><Zap size={14} /> +{reward.xp} XP</span>
           <span><Coins size={14} /> +{reward.gold}</span>
@@ -195,7 +196,7 @@ function MainQuest({ quest, skillName, goalTitle, onToggle }: { quest: Quest; sk
   )
 }
 
-function DayTimeline({ quests, date, onToggle, onSkip }: { quests: Quest[]; date: string; onToggle: (id: string) => void; onSkip: (id: string) => void }) {
+function DayTimeline({ quests, date, onToggle, onSkip, onEdit }: { onEdit: (quest: Quest) => void; quests: Quest[]; date: string; onToggle: (id: string) => void; onSkip: (id: string) => void }) {
   const scheduled = quests.filter((quest) => quest.scheduledTime)
   const unscheduled = quests.filter((quest) => !quest.scheduledTime)
   const startHour = 7
@@ -211,13 +212,13 @@ function DayTimeline({ quests, date, onToggle, onSkip }: { quests: Quest[]; date
           const height = Math.max(42, quest.durationMinutes / 60 * hourHeight)
           const complete = isQuestComplete(quest, date)
           const skipped = isQuestSkipped(quest, date)
-          return <div key={quest.id} className={`timeline-event ${complete ? 'is-complete' : ''} ${skipped ? 'is-skipped' : ''}`} style={{ top, height, left: `${74 + (index % 2) * 8}px` }}><button className="timeline-event__content" type="button" onClick={() => onToggle(quest.id)}><strong>{quest.title}</strong><span>{quest.scheduledTime} · {formatDuration(quest.durationMinutes)}</span></button><button className="timeline-event__skip" type="button" onClick={() => onSkip(quest.id)} title={quest.repeatDays.length > 0 ? 'Не выполнено сегодня' : 'Не выполнено — перенести на завтра'}><X size={13} /></button></div>
+          return <div key={quest.id} className={`timeline-event ${complete ? 'is-complete' : ''} ${skipped ? 'is-skipped' : ''}`} style={{ top, height, left: `${74 + (index % 2) * 8}px` }}><button className="timeline-event__content" type="button" onClick={() => onToggle(quest.id)}><strong>{quest.title}</strong><span>{quest.scheduledTime} · {formatDuration(quest.durationMinutes)}</span></button><button className="timeline-event__skip" type="button" onClick={() => onEdit(quest)} aria-label={`Редактировать: ${quest.title}`} title="Редактировать квест"><Pencil size={13} /></button><button className="timeline-event__skip" type="button" onClick={() => onSkip(quest.id)} title={quest.repeatDays.length > 0 ? 'Не выполнено сегодня' : 'Не выполнено — перенести на завтра'}><X size={13} /></button></div>
         })}
       </div>}
       {unscheduled.length > 0 && <div className="unscheduled"><span className="eyebrow">В любое время</span>{unscheduled.map((quest) => {
         const complete = isQuestComplete(quest, date)
         const skipped = isQuestSkipped(quest, date)
-        return <div className={`unscheduled-event ${complete ? 'is-complete' : ''} ${skipped ? 'is-skipped' : ''}`} key={quest.id}><button className="unscheduled-event__content" type="button" onClick={() => onToggle(quest.id)}><i />{quest.title}<span>{formatDuration(quest.durationMinutes)}</span></button><button className="unscheduled-event__skip" type="button" onClick={() => onSkip(quest.id)} title={quest.repeatDays.length > 0 ? 'Не выполнено сегодня' : 'Не выполнено — перенести на завтра'}><X size={13} /></button></div>
+        return <div className={`unscheduled-event ${complete ? 'is-complete' : ''} ${skipped ? 'is-skipped' : ''}`} key={quest.id}><button className="unscheduled-event__content" type="button" onClick={() => onToggle(quest.id)}><i />{quest.title}<span>{formatDuration(quest.durationMinutes)}</span></button><button className="unscheduled-event__skip" type="button" onClick={() => onEdit(quest)} aria-label={`Редактировать: ${quest.title}`} title="Редактировать квест"><Pencil size={13} /></button><button className="unscheduled-event__skip" type="button" onClick={() => onSkip(quest.id)} title={quest.repeatDays.length > 0 ? 'Не выполнено сегодня' : 'Не выполнено — перенести на завтра'}><X size={13} /></button></div>
       })}</div>}
     </div>
   )

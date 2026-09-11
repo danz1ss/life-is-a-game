@@ -48,7 +48,7 @@ export function QuestsPage({ onNavigate }: { onNavigate: (page: string) => void 
     onEdit={() => setModal(quest)}
     onMakeMain={!quest.archivedAt && quest.completedDates.length === 0 ? () => setMainQuest(quest.id) : undefined}
     onReorder={reorderQuest}
-    onDelete={() => { if (window.confirm(`Удалить квест «${quest.title}»? Заработанный ранее опыт сохранится.`)) deleteQuest(quest.id) }}
+    onDelete={() => deleteQuest(quest.id)}
     badge={badge}
     footer={footer}
   />
@@ -104,7 +104,7 @@ export function QuestsPage({ onNavigate }: { onNavigate: (page: string) => void 
       {archived.length === 0 ? <EmptyState icon="◇" title="Архив пуст" text="Здесь появятся завершённые и отменённые квесты." /> : <div className="quest-list quest-list--roomy">{archived.map((quest) => questCard(quest, quest.completedDates.length > 0 ? { label: 'Выполнен', tone: 'success' } : { label: 'Отменён', tone: 'muted' }, quest.archivedAt && quest.completedDates.length === 0 ? <div className="overdue-actions"><button className="mini-action" onClick={() => restoreQuest(quest.id)}><RotateCcw size={12} /> Вернуть на сегодня</button></div> : undefined, quest.completedDates.length > 0))}</div>}
     </section>}
 
-    {modal && <QuestModal quest={modal === 'new' ? null : modal} skills={state.skills} onSave={save} onClose={() => setModal(null)} />}
+    {modal && <QuestModal quest={modal === 'new' ? null : modal} skills={state.skills} onSave={save} onDelete={modal !== 'new' ? () => { deleteQuest(modal.id); setModal(null) } : undefined} onClose={() => setModal(null)} />}
   </div>
 }
 

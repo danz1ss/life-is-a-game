@@ -1,4 +1,6 @@
 import type { AppState, Difficulty, Quest, Skill, SkillGoal } from './types'
+import { defaultSkillColors, migrateSkillColors } from './skillColors'
+import { normalizeBackground } from './appearance'
 
 export const goalCompletionReward = { xp: 150, gold: 30 }
 
@@ -111,23 +113,11 @@ export function calculateStreak(activeDays: string[], today = dateKey()) {
   return streak
 }
 
-export function branchColor(skill: Skill, skills: Skill[]) {
-  let current = skill
-  const visited = new Set<string>()
-  while (current.parentId && !visited.has(current.id)) {
-    visited.add(current.id)
-    const parent = skills.find((item) => item.id === current.parentId)
-    if (!parent) break
-    current = parent
-  }
-  return current.color || skill.color
-}
-
 export function createInitialState(): AppState {
   const today = dateKey()
   const now = new Date().toISOString()
   return {
-    version: 3,
+    version: 4,
     profile: {
       name: 'Игрок',
       avatar: '⚔️',
@@ -144,7 +134,7 @@ export function createInitialState(): AppState {
       { id: 'reading', name: 'Чтение', description: 'Книги и осмысленное обучение', icon: '▤', color: '#9b8cff', parentId: 'growth', xp: 0, position: { x: -120, y: 380 }, requiredParentLevel: 1, createdAt: now },
       { id: 'english', name: 'Английский', description: 'Разговорная речь и словарный запас', icon: 'A', color: '#9b8cff', parentId: 'growth', xp: 0, position: { x: 80, y: 380 }, requiredParentLevel: 1, createdAt: now },
       { id: 'programming', name: 'Программирование', description: 'Создание приложений и систем', icon: '</>', color: '#ffb45e', parentId: 'career', xp: 0, position: { x: 290, y: 380 }, requiredParentLevel: 1, createdAt: now },
-    ],
+    ].map((skill) => ({ ...skill, color: defaultSkillColors[skill.id] ?? skill.color })),
     quests: [
       { id: 'quest-project', title: 'Поработать над главным проектом', description: 'Сделать один конкретный шаг, который двигает проект вперёд.', difficulty: 'hard', skillId: 'programming', dueDate: today, scheduledTime: '10:00', durationMinutes: 90, repeatDays: [], isMain: true, order: 0, completedDates: [], skippedDates: [], archivedAt: null, createdAt: now },
       { id: 'quest-reading', title: 'Прочитать 20 страниц', description: '', difficulty: 'medium', skillId: 'reading', dueDate: today, scheduledTime: null, durationMinutes: 30, repeatDays: [], isMain: false, order: 1, completedDates: [], skippedDates: [], archivedAt: null, createdAt: now },
@@ -157,13 +147,14 @@ export function createInitialState(): AppState {
       { id: 'reward-treat', title: 'Любимое угощение', description: '', icon: '☕', cost: 15, createdAt: now },
     ],
     history: [],
-    preferences: { todayMode: 'list' },
+    preferences: { todayMode: 'list', background: 'minimalism' },
   }
 }
 
-type StoredState = Partial<Omit<AppState, 'version' | 'quests'>> & {
+type StoredState = Partial<Omit<AppState, 'version' | 'quests' | 'preferences'>> & {
   version?: number
   quests?: Array<Partial<Quest>>
+  preferences?: Partial<AppState['preferences']>
 }
 
 export function migrateState(value: unknown): AppState {
@@ -173,9 +164,9 @@ export function migrateState(value: unknown): AppState {
   if (!Array.isArray(stored.skills) || !Array.isArray(stored.quests)) return fallback
 
   return {
-    version: 3,
+    version: 4,
     profile: stored.profile ?? fallback.profile,
-    skills: stored.skills,
+    skills: (stored.version ?? 1) < 4 ? migrateSkillColors(stored.skills) : stored.skills,
     quests: stored.quests.map((quest, index) => ({
       ...quest,
       order: typeof quest.order === 'number' ? quest.order : index,
@@ -185,6 +176,10 @@ export function migrateState(value: unknown): AppState {
     goals: Array.isArray(stored.goals) ? stored.goals : [],
     rewards: Array.isArray(stored.rewards) ? stored.rewards : [],
     history: Array.isArray(stored.history) ? stored.history : [],
-    preferences: stored.preferences ?? fallback.preferences,
+    preferences: {
+      ...stored.preferences,
+      todayMode: stored.preferences?.todayMode === 'timeline' ? 'timeline' : 'list',
+      background: normalizeBackground(stored.preferences?.background),
+    },
   }
 }

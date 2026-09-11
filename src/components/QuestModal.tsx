@@ -1,15 +1,16 @@
 import { useEffect, useState, type FormEvent } from 'react'
-import { CalendarDays, Clock3, Flag, Repeat2, Sparkles } from 'lucide-react'
+import { CalendarDays, Clock3, Flag, Repeat2, Sparkles, Trash2 } from 'lucide-react'
 import { dateKey, difficultyConfig, weekDays } from '../lib/game'
 import type { Difficulty, Quest, QuestDraft, Skill } from '../lib/types'
 import { Modal } from './Ui'
 
-export function QuestModal({ quest, skills, initialIsMain = false, onSave, onClose }: {
+export function QuestModal({ quest, skills, initialIsMain = false, onSave, onClose, onDelete }: {
   quest?: Quest | null
   skills: Skill[]
   initialIsMain?: boolean
   onSave: (draft: QuestDraft) => void
   onClose: () => void
+  onDelete?: () => void
 }) {
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
@@ -78,7 +79,7 @@ export function QuestModal({ quest, skills, initialIsMain = false, onSave, onClo
           <span><Sparkles size={15} /> Навык</span>
           <select value={skillId} onChange={(event) => setSkillId(event.target.value)}>
             <option value="">Без навыка</option>
-            {skills.map((skill) => <option value={skill.id} key={skill.id}>{skill.icon} {skill.name}</option>)}
+            {skills.map((skill) => <option value={skill.id} key={skill.id}>{skill.name}</option>)}
           </select>
         </label>
 
@@ -112,6 +113,7 @@ export function QuestModal({ quest, skills, initialIsMain = false, onSave, onClo
         </label>
 
         <footer className="form-actions field--full">
+          {quest && onDelete && <button className="button button--danger quest-delete-button" type="button" onClick={onDelete}><Trash2 size={15} /> Удалить квест</button>}
           <button className="button button--ghost" type="button" onClick={onClose}>Отмена</button>
           <button className="button button--primary" type="submit">{quest ? 'Сохранить' : 'Создать квест'}</button>
         </footer>

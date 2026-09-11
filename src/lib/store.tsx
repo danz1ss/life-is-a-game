@@ -1,6 +1,10 @@
 import { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { createInitialState, dateKey, difficultyConfig, goalCompletionReward, isQuestComplete, isQuestForDate, isQuestSkipped, migrateState, nextDateKey } from './game'
 import type { AppState, Profile, Quest, QuestDraft, Reward, RewardDraft, Skill, SkillDraft, SkillGoal, SkillGoalDraft } from './types'
+import { removeQuest, restoreDeletedQuest } from './questDeletion'
+import { updateSkillColors } from './skillColors'
+import type { BackgroundTheme } from './appearance'
+import { nextSkillPosition } from './treeLayout'
 
 type SaveStatus = 'loading' | 'saved' | 'saving' | 'error'
 
@@ -12,6 +16,9 @@ interface StoreValue {
   addQuest: (draft: QuestDraft) => void
   updateQuest: (id: string, patch: Partial<Quest>) => void
   deleteQuest: (id: string) => void
+  deletedQuest: Quest | null
+  undoDeleteQuest: () => void
+  dismissDeletedQuests: () => void
   archiveQuest: (id: string) => void
   restoreQuest: (id: string) => void
   toggleQuest: (id: string, onDate?: string) => void
@@ -33,6 +40,7 @@ interface StoreValue {
   redeemReward: (id: string) => boolean
   updateProfile: (patch: Partial<Profile>) => void
   setTodayMode: (mode: 'list' | 'timeline') => void
+  setBackground: (theme: BackgroundTheme) => void
   exportBackup: () => Promise<string | null>
   importBackup: () => Promise<boolean>
 }
@@ -63,6 +71,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<AppState | null>(null)
   const [saveStatus, setSaveStatus] = useState<SaveStatus>('loading')
   const [toast, setToast] = useState<string | null>(null)
+  const [deletedQuests, setDeletedQuests] = useState<Quest[]>([])
   const hydrated = useRef(false)
   const previousLevel = useRef(1)
 
@@ -127,7 +136,17 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     }
 
     const deleteQuest = (id: string) => {
-      setState((current) => current && ({ ...current, quests: current.quests.filter((quest) => quest.id !== id) }))
+      const quest = state.quests.find((item) => item.id === id)
+      if (!quest) return
+      setDeletedQuests((items) => [...items, quest])
+      setState((current) => current && removeQuest(current, id))
+    }
+
+    const undoDeleteQuest = () => {
+      const quest = deletedQuests.at(-1)
+      if (!quest) return
+      setState((current) => current && restoreDeletedQuest(current, quest))
+      setDeletedQuests((items) => items.slice(0, -1))
     }
 
     const archiveQuest = (id: string) => {
@@ -304,14 +323,13 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     const addSkill = (draft: SkillDraft) => {
       setState((current) => {
         if (!current) return current
-        const index = current.skills.length
         return {
           ...current,
           skills: [...current.skills, {
             ...draft,
             id: uuid(),
             xp: 0,
-            position: draft.position ?? { x: (index % 4) * 230 - 300, y: Math.floor(index / 4) * 190 + 160 },
+            position: draft.position ?? nextSkillPosition(current.skills, draft.parentId),
             createdAt: new Date().toISOString(),
           }],
         }
@@ -321,7 +339,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     const updateSkill = (id: string, patch: Partial<Skill>) => {
       setState((current) => current && ({
         ...current,
-        skills: current.skills.map((skill) => skill.id === id ? { ...skill, ...patch } : skill),
+        skills: updateSkillColors(current.skills, id, patch),
       }))
     }
 
@@ -449,6 +467,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       setState((current) => current && ({ ...current, preferences: { ...current.preferences, todayMode: mode } }))
     }
 
+    const setBackground = (background: BackgroundTheme) => {
+      setState((current) => current && ({ ...current, preferences: { ...current.preferences, background } }))
+    }
+
     const exportBackup = async () => {
       if (!window.lifeGame) {
         const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' })
@@ -469,19 +491,21 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       const result = await window.lifeGame.importBackup()
       if (result.canceled || !result.state) return false
       setState(migrateState(result.state))
+      setDeletedQuests([])
       setToast('Резервная копия восстановлена')
       return true
     }
 
     return {
       state, saveStatus, toast, dismissToast: () => setToast(null),
+      deletedQuest: deletedQuests.at(-1) ?? null, undoDeleteQuest, dismissDeletedQuests: () => setDeletedQuests([]),
       addQuest, updateQuest, deleteQuest, archiveQuest, restoreQuest, toggleQuest, skipQuest, closeDay, reorderQuest, setMainQuest,
       addSkill, updateSkill, deleteSkill, moveSkill,
       addGoal, updateGoal, deleteGoal, completeGoal,
       addReward, updateReward, deleteReward, redeemReward,
-      updateProfile, setTodayMode, exportBackup, importBackup,
+      updateProfile, setTodayMode, setBackground, exportBackup, importBackup,
     }
-  }, [state, saveStatus, toast])
+  }, [state, saveStatus, toast, deletedQuests])
 
   if (!value) return <div className="app-loading"><div className="loading-rune">✦</div><p>Загружаем приключение…</p></div>
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>

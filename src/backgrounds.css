@@ -1,0 +1,123 @@
+/* Each scene owns its backdrop. Night sky also supplies matching navy surfaces;
+   skill colors and result states remain independent of the scene. */
+[data-background="minimalism"] {
+  --scene-background: linear-gradient(125deg, #16191f, #1d212a 55%, #171a22);
+  --scene-image: none;
+  --scene-image-size: auto;
+  --scene-image-opacity: 0;
+}
+[data-background="texture"] {
+  --scene-background: radial-gradient(ellipse at 75% 0%, #12384d60, transparent 65%), linear-gradient(135deg, #081721, #030b13 52%, #11202d);
+  --scene-image: url('./assets/backgrounds/grain.svg');
+  --scene-image-size: 280px 280px;
+  --scene-image-opacity: .17;
+}
+[data-background="night-sky"] {
+  --scene-background: #020814;
+  --scene-image: url('./assets/backgrounds/night-nebula.png');
+  --scene-image-size: cover;
+  --scene-image-opacity: 1;
+}
+.app-shell[data-background], .background-preview[data-background] { background: var(--scene-background); }
+.app-shell[data-background]::before, .background-preview[data-background]::before {
+  content: '';
+  position: absolute;
+  z-index: -1;
+  inset: 0;
+  background-image: var(--scene-image);
+  background-size: var(--scene-image-size);
+  background-position: center top;
+  opacity: var(--scene-image-opacity);
+  pointer-events: none;
+}
+
+/* Scoped to the app, so switching away restores the other themes completely. */
+.app-shell[data-background="night-sky"] {
+  --bg: #020814;
+  --sidebar: #08182c;
+  --panel: #10243c;
+  --panel-2: #172f4c;
+  --line: #315373;
+  --line-soft: #233e5b;
+  --surface: linear-gradient(135deg, #142d49, #0d1e35);
+  --surface-inset: #0a1a30;
+  --text: #edf6ff;
+  --muted: #b8cce0;
+  --muted-2: #a4bcd5;
+  --tree-bg: #051225;
+  --tree-node: #122940;
+  --tree-line: #315373;
+  --tree-dot: #5078a15c;
+  --tree-minimap-mask: #051225c2;
+  --accent: #69c9f2;
+  --accent-bright: #a9e7ff;
+  --blue: #69c9f2;
+  color: var(--text);
+}
+.app-shell[data-background="night-sky"] .sidebar { background: linear-gradient(180deg, #0d2039f5, #061326f5); }
+.app-shell[data-background="night-sky"] :is(.page-header, .dashboard-header) { text-shadow: 0 2px 12px #020814; }
+.app-shell[data-background="night-sky"] .quest-card { background: var(--panel-2); }
+.app-shell[data-background="night-sky"] .quest-card:hover { background: #1c3b5e; }
+.app-shell[data-background="night-sky"] .quest-card:not(.is-complete):not(.is-skipped) { border-color: #3b5d7d; }
+.app-shell[data-background="night-sky"] .quest-card:not(.is-complete):not(.is-skipped):hover { border-color: #6198c0; }
+.app-shell[data-background="night-sky"] .quest-card:not(.is-complete) .quest-check,
+.app-shell[data-background="night-sky"] .quest-card:not(.is-skipped) .quest-skip { background: #203e5e; }
+.app-shell[data-background="night-sky"] .quest-card:not(.is-complete) .quest-check { border-color: #97c6e8; color: #e0f5ff; }
+.app-shell[data-background="night-sky"] .quest-card:not(.is-complete) .quest-check:hover:not(:disabled),
+.app-shell[data-background="night-sky"] .quest-card:not(.is-skipped) .quest-skip:hover { background: #315b80; }
+.app-shell[data-background="night-sky"] :is(.quest-card p, .quest-meta, .main-quest__content p, .main-quest__meta) { color: var(--muted); }
+.app-shell[data-background="night-sky"] .button--secondary { border-color: #50769a; background: #244467; }
+.app-shell[data-background="night-sky"] .button--secondary:hover { border-color: #69c9f2; background: #2e577f; }
+.app-shell[data-background="night-sky"] :is(.segmented, .branch-tabs button) { border-color: var(--line); background: #0c1c32; }
+.app-shell[data-background="night-sky"] :is(.segmented button.is-active, .branch-tabs button.is-active) { background: #284d73; }
+.app-shell[data-background="night-sky"] .branch-tabs button.is-active { border-color: #69c9f2; }
+.app-shell[data-background="night-sky"] .timeline-event:not(.is-complete):not(.is-skipped) { background: #173452f5; }
+.app-shell[data-background="night-sky"] .timeline-event__skip { background: #10243c; }
+.app-shell[data-background="night-sky"] .timeline-event__skip:hover { background: #4a2130; }
+.app-shell[data-background="night-sky"] .unscheduled-event:not(.is-complete):not(.is-skipped) { background: var(--panel-2); }
+.app-shell[data-background="night-sky"] .react-flow__controls { border-color: var(--line); }
+.app-shell[data-background="night-sky"] .react-flow__controls button { border-color: var(--line); background: var(--panel-2); }
+.app-shell[data-background="night-sky"] .react-flow__controls button:hover { background: #284d73; }
+.app-shell[data-background="night-sky"] .react-flow__handle { border-color: #8baecf; background: var(--panel-2); }
+.app-shell[data-background="night-sky"] .react-flow__minimap { border-color: var(--line); background: var(--tree-bg); }
+.app-shell[data-background="night-sky"] .tree-root-node { border-color: #50769a; background: linear-gradient(135deg, #173a60, #10243c); }
+.app-shell[data-background="night-sky"] .tree-hint { border-color: var(--line); background: #0a1a30ef; }
+.app-shell[data-background="night-sky"] .skill-details { border-color: #42698c; background: #10243cfa; }
+.app-shell[data-background="night-sky"] .active-goal-card { border-color: #42698c; background: var(--panel-2); }
+.app-shell[data-background="night-sky"] .modal-card { border-color: #42698c; background: linear-gradient(140deg, #173452, #0b1d34); }
+.app-shell[data-background="night-sky"] .field :is(input, textarea, select):not(:focus) { border-color: #42698c; }
+.app-shell[data-background="night-sky"] :is(.field, .select-field) select option { background: var(--panel); }
+.app-shell[data-background="night-sky"] :is(.weekday-picker, .icon-picker) button:not(.is-selected),
+.app-shell[data-background="night-sky"] .check-field { border-color: #42698c; background: var(--panel-2); }
+.app-shell[data-background="night-sky"] .color-picker button { border-color: var(--panel); }
+.app-shell[data-background="night-sky"] .background-option { border-color: #42698c; background: #10243c; }
+.app-shell[data-background="night-sky"] .background-option:hover { border-color: #a9e7ff; }
+.app-shell[data-background="night-sky"] .background-option:has(input:checked) { border-color: var(--accent); background: #183c60; }
+
+.appearance-button { display: flex; align-items: center; gap: 10px; width: 100%; margin-bottom: 12px; padding: 11px; border: 1px solid var(--line); border-radius: 11px; color: var(--text); background: #ffffff04; cursor: pointer; text-align: left; }
+.appearance-button:hover { border-color: #819bb480; background: #ffffff08; }
+.appearance-button > svg:first-child { color: var(--accent); }
+.appearance-button > span { flex: 1; font-size: 13px; }
+.appearance-button small { display: block; margin-top: 3px; color: var(--muted); font-size: 11px; }
+.appearance-button > svg:last-child { color: var(--muted); }
+.background-options { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; padding: 0; margin: 0; border: 0; }
+.background-option { overflow: hidden; padding: 7px 7px 13px; border: 1px solid #50596a; border-radius: 13px; background: #222731; cursor: pointer; }
+.background-option:hover { border-color: #91b6d0; }
+.background-option:has(input:checked) { border-color: var(--accent); box-shadow: 0 0 0 1px #8bc9f040; background: #283442; }
+.background-option:has(input:focus-visible) { outline: 2px solid var(--accent-bright); outline-offset: 3px; }
+.background-option__title { display: flex; align-items: center; gap: 7px; margin: 11px 4px 6px; }
+.background-option__title input { width: 14px; height: 14px; margin: 0; accent-color: var(--accent); }
+.background-option__title strong { font-size: 13px; font-weight: 600; }
+.background-option__description { display: block; margin: 0 4px; color: var(--muted); font-size: 12px; line-height: 1.5; }
+.background-preview { display: block; position: relative; isolation: isolate; height: 126px; overflow: hidden; border: 1px solid #56607080; border-radius: 8px; }
+.background-preview[data-background="texture"] { --scene-image-size: 150px 150px; }
+.background-preview__sidebar { position: absolute; inset: 0 auto 0 0; width: 18%; background: #222731; border-right: 1px solid #444b59; }
+.background-preview__panel { position: absolute; top: 28%; left: 23%; width: 45%; height: 23%; border: 1px solid #49505d; border-radius: 4px; background: #292d37; }
+.background-preview__hero { position: absolute; top: 28%; right: 5%; width: 23%; height: 23%; border: 1px solid #559ed1b3; border-radius: 4px; background: radial-gradient(ellipse at top right, #204f76, #081c30 75%); }
+.background-preview__tasks { position: absolute; top: 57%; left: 23%; right: 5%; bottom: 7%; display: grid; gap: 4px; }
+.background-preview__tasks i { display: block; border: 1px solid #49505d; border-radius: 3px; background: #292d37; }
+.background-preview[data-background="night-sky"] .background-preview__sidebar { background: #08182cf5; border-color: #315373; }
+.background-preview[data-background="night-sky"] :is(.background-preview__panel, .background-preview__tasks i) { background: #172f4c; border-color: #3b5d7d; }
+.appearance-footer { display: flex; justify-content: space-between; align-items: center; gap: 20px; margin-top: 20px; }
+.appearance-footer > span { color: var(--muted); font-size: 12px; line-height: 1.5; }
+@media (max-width: 650px) { .background-options { grid-template-columns: 1fr; } }

@@ -1,3 +1,5 @@
+import type { BackgroundTheme } from './appearance'
+
 export type Difficulty = 'easy' | 'medium' | 'hard'
 
 export interface Profile {
@@ -78,7 +80,7 @@ export interface HistoryEvent {
 }
 
 export interface AppState {
-  version: 3
+  version: 4
   profile: Profile
   skills: Skill[]
   quests: Quest[]
@@ -87,6 +89,7 @@ export interface AppState {
   history: HistoryEvent[]
   preferences: {
     todayMode: 'list' | 'timeline'
+    background: BackgroundTheme
   }
 }
 

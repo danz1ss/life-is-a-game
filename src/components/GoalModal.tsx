@@ -30,7 +30,7 @@ export function GoalModal({ goal, skill, onSave, onClose }: {
     onSave({ skillId: skill.id, title: title.trim(), purpose: purpose.trim(), successCriteria: successCriteria.trim(), targetDate: targetDate || null, progress })
   }
 
-  return <Modal title={goal ? 'Изменить главную цель' : 'Главная цель навыка'} subtitle={`${skill.icon} ${skill.name} · одна активная цель задаёт направление всей ветке`} onClose={onClose} wide>
+  return <Modal title={goal ? 'Изменить главную цель' : 'Главная цель навыка'} subtitle={`${skill.name} · одна активная цель задаёт направление всей ветке`} onClose={onClose} wide>
     <form className="form goal-form" onSubmit={submit}>
       <label className="field field--full"><span><Target size={15} /> К чему я стремлюсь</span><input autoFocus value={title} onChange={(event) => setTitle(event.target.value)} placeholder="Например: свободно говорить на английском на уровне B2" maxLength={140} /></label>
       <label className="field field--full"><span><Heart size={15} /> Зачем мне это</span><textarea value={purpose} onChange={(event) => setPurpose(event.target.value)} placeholder="Личный смысл цели — что изменится, когда вы её достигнете?" rows={3} /></label>

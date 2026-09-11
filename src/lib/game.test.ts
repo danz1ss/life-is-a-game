@@ -37,7 +37,7 @@ describe('миграция локальных данных', () => {
 
     const migrated = migrateState(legacy)
 
-    expect(migrated.version).toBe(3)
+    expect(migrated.version).toBe(4)
     expect(migrated.goals).toEqual([])
     expect(migrated.quests.every((quest) => quest.archivedAt === null)).toBe(true)
     expect(migrated.quests.every((quest) => quest.skippedDates.length === 0)).toBe(true)
