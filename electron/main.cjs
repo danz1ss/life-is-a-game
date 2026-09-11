@@ -79,13 +79,14 @@ function registerIpc() {
 }
 
 function createWindow() {
+  const profileTitle = process.env.LIFE_GAME_PROFILE_LABEL
   const window = new BrowserWindow({
     width: 1440,
     height: 900,
     minWidth: 1040,
     minHeight: 700,
-    backgroundColor: '#080d18',
-    title: 'Life is a Game',
+    backgroundColor: '#17191f',
+    title: profileTitle ? `Life is a Game — ${profileTitle}` : 'Life is a Game',
     autoHideMenuBar: true,
     webPreferences: {
       preload: path.join(__dirname, 'preload.cjs'),
@@ -94,6 +95,11 @@ function createWindow() {
       sandbox: true,
     },
   })
+
+  if (profileTitle) {
+    window.on('page-title-updated', (event) => event.preventDefault())
+    window.webContents.on('did-finish-load', () => window.setTitle(`Life is a Game — ${profileTitle}`))
+  }
 
   window.webContents.setWindowOpenHandler(() => ({ action: 'deny' }))
   if (app.isPackaged || process.env.LIFE_GAME_LOAD_DIST === '1') {
