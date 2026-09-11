@@ -56,8 +56,8 @@
 }
 .app-shell[data-background="night-sky"] .sidebar { background: linear-gradient(180deg, #0d2039f5, #061326f5); }
 .app-shell[data-background="night-sky"] :is(.page-header, .dashboard-header) { text-shadow: 0 2px 12px #020814; }
-.app-shell[data-background="night-sky"] .quest-card { background: var(--panel-2); }
-.app-shell[data-background="night-sky"] .quest-card:hover { background: #1c3b5e; }
+.app-shell[data-background="night-sky"] .quest-card:not(.is-complete):not(.is-skipped) { background: var(--panel-2); }
+.app-shell[data-background="night-sky"] .quest-card:not(.is-complete):not(.is-skipped):hover { background: #1c3b5e; }
 .app-shell[data-background="night-sky"] .quest-card:not(.is-complete):not(.is-skipped) { border-color: #3b5d7d; }
 .app-shell[data-background="night-sky"] .quest-card:not(.is-complete):not(.is-skipped):hover { border-color: #6198c0; }
 .app-shell[data-background="night-sky"] .quest-card:not(.is-complete) .quest-check,

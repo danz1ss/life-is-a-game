@@ -42,7 +42,7 @@ export function QuestCard({ quest, skill, goalTitle, date, onToggle, onSkip, onE
         <button className={`quest-check ${!onToggle ? 'quest-check--static' : ''}`} type="button" disabled={!onToggle} onClick={onToggle} aria-label={complete ? 'Вернуть квест' : 'Выполнить квест'} aria-pressed={complete}>
           <Check size={16} strokeWidth={2} />
         </button>
-        {onSkip && <button className="quest-skip" type="button" onClick={onSkip} aria-label={skipped ? 'Снять отметку «не выполнено»' : quest.repeatDays.length > 0 ? 'Не выполнено сегодня' : 'Не выполнено — перенести на завтра'} aria-pressed={skipped} title={quest.repeatDays.length > 0 ? 'Не выполнено сегодня' : 'Не выполнено — перенести на завтра'}>
+        {onSkip && <button className="quest-skip" type="button" onClick={onSkip} aria-label={skipped ? 'Снять отметку «не выполнено»' : 'Не выполнено сегодня'} aria-pressed={skipped} title={'Не выполнено сегодня'}>
           <X size={16} strokeWidth={2} />
         </button>}
       </div>
@@ -50,7 +50,6 @@ export function QuestCard({ quest, skill, goalTitle, date, onToggle, onSkip, onE
         <div className="quest-card__topline">
           <h3>{quest.title}</h3>
           {quest.isMain && <span className="main-badge"><Star size={11} fill="currentColor" /> Главный</span>}
-          {(complete || skipped) && <span className="quest-result-label">{complete ? 'Выполнено' : 'Не выполнено'}</span>}
         </div>
         {quest.description && <p className={compact ? 'quest-description--compact' : ''}>{quest.description}</p>}
         <div className="quest-meta">

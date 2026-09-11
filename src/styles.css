@@ -216,12 +216,17 @@ h1, h2, h3, p { margin-top: 0; }
 .quest-card { position: relative; display: flex; align-items: center; gap: 12px; min-height: 73px; padding: 13px 14px; border: 1px solid #464b59; border-radius: 13px; background: #292d37; box-shadow: inset 0 1px 0 #ffffff06; transition: .18s ease; }
 .quest-card:hover { border-color: #697386; background: #2e333f; transform: translateY(-1px); }
 .quest-card--compact { min-height: 65px; padding: 10px 12px; }
-.quest-card.is-complete { border-color: #648b7d; background: #292d37; box-shadow: inset 2px 0 0 #7cc5a8; }
-.quest-card.is-complete:hover { border-color: #63dfad85; box-shadow: inset 3px 0 0 #63dfad, 0 10px 28px #07150f3d; }
-.quest-card.is-complete h3 { color: #c8ecdf; text-decoration: line-through; text-decoration-color: #65d9aa; text-decoration-thickness: 1px; }
+/* The inset ring adds a second pixel without shifting the card contents. */
+.quest-card.is-complete { border-color: #58d6a0; background: linear-gradient(105deg, #58d6a01c, #58d6a006), var(--panel-2, #292d37); box-shadow: inset 0 0 0 1px #58d6a0, inset 4px 0 16px #58d6a018, 0 0 16px #58d6a030; animation: quest-complete-glow .55s ease-out; }
+.quest-card.is-complete:hover { border-color: #7ce8b8; box-shadow: inset 0 0 0 1px #7ce8b8, inset 4px 0 16px #58d6a020, 0 0 20px #58d6a040; }
+.quest-card.is-complete h3 { color: #e0fff0; text-decoration: none; }
 .quest-card.is-complete p, .quest-card.is-complete .quest-meta { color: #bbc0ce; }
-.quest-card.is-skipped { border-color: #967887; box-shadow: inset 2px 0 #cf9fb2; }
-.quest-card.is-skipped h3 { color: #dfc5d0; text-decoration: line-through; }
+.quest-card.is-skipped { border-color: #e88b94; background: linear-gradient(105deg, #e88b9415, #e88b9405), var(--panel-2, #292d37); box-shadow: inset 0 0 0 1px #e88b94, 0 0 12px #e88b941c; animation: quest-skipped-glow .3s ease-out; }
+.quest-card.is-skipped:hover { border-color: #f2a4ac; box-shadow: inset 0 0 0 1px #f2a4ac, 0 0 16px #e88b9428; }
+.quest-card.is-skipped h3 { color: #f5dfe2; text-decoration: none; }
+@keyframes quest-complete-glow { from { box-shadow: inset 0 0 0 1px #a5ffda, 0 0 28px #58d6a070; } }
+@keyframes quest-skipped-glow { from { box-shadow: inset 0 0 0 1px #e88b9460, 0 0 0 transparent; } }
+@media (prefers-reduced-motion: reduce) { .quest-card.is-complete, .quest-card.is-skipped { animation: none; } }
 .quest-drag-handle { display: grid; flex: 0 0 17px; place-items: center; width: 17px; margin-left: -7px; color: #8791a3; cursor: grab; touch-action: none; }
 .quest-drag-handle:hover { color: var(--accent-bright); }
 .quest-drag-handle:active { cursor: grabbing; }
@@ -229,15 +234,13 @@ h1, h2, h3, p { margin-top: 0; }
 .quest-check, .quest-skip { display: grid; flex: 0 0 30px; place-items: center; width: 30px; height: 30px; padding: 0; border: 1px solid #9199aa; border-radius: 50%; color: #edf1f8; background: #333946; cursor: pointer; }
 .quest-check:hover:not(:disabled), .quest-skip:hover { border-color: #d5deee; background: #485264; }
 .quest-skip { color: #e5c2ce; border-color: #a08a99; }
-.quest-card.is-complete .quest-check { border-color: #b9efd7; color: #122c24; background: #93d6b9; box-shadow: none; }
-.quest-card.is-skipped .quest-skip { border-color: #f1d1dc; color: #38262e; background: #dfb5c5; }
+.quest-card.is-complete .quest-check { border-color: #b9efd7; color: #122c24; background: #58d6a0; box-shadow: 0 0 10px #58d6a035; }
+.quest-card.is-skipped .quest-skip { border-color: #f1d1dc; color: #38262e; background: #e88b94; }
 .quest-card__body { flex: 1; min-width: 0; }
 .quest-card__topline { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; }
 .quest-card__topline h3 { min-width: 0; }
 .quest-card h3 { overflow: hidden; margin: 0 0 6px; font-size: 15px; font-weight: 600; line-height: 1.2; text-overflow: ellipsis; white-space: nowrap; }
 .quest-card p { margin: -1px 0 8px; color: #bbc0ce; font-size: 13px; line-height: 1.4; }
-.quest-result-label { margin-bottom: 6px; color: #b2e3ce; font-size: 11px; }
-.quest-card.is-skipped .quest-result-label { color: #efd0dc; }
 .quest-description--compact { display: -webkit-box; overflow: hidden; margin-bottom: 6px !important; font-size: 12px !important; line-height: 1.4 !important; -webkit-box-orient: vertical; -webkit-line-clamp: 1; }
 .quest-check--static { cursor: default; opacity: .35; }
 .quest-card__footer { margin-top: 10px; padding-top: 9px; border-top: 1px solid #233b4f; }

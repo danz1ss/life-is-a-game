@@ -185,7 +185,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
             id: uuid(), type: 'quest', date: onDate, createdAt: new Date().toISOString(), title: quest.title,
             questId: quest.id, skillId: quest.skillId, xp: reward.xp, gold: reward.gold,
           })
-          setToast(`+${reward.xp} XP · +${reward.gold} золота`)
+          setToast(`Выполнено · +${reward.xp} XP · +${reward.gold} золота`)
         } else if (eventIndex >= 0) {
           history.splice(eventIndex, 1)
         }
@@ -221,7 +221,6 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       if (!quest) return
       const skipped = isQuestSkipped(quest, onDate)
       const complete = isQuestComplete(quest, onDate)
-      const tomorrow = nextDateKey(onDate)
 
       setState((current) => {
         if (!current) return current
@@ -255,7 +254,6 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           quests: current.quests.map((item) => item.id === id
             ? {
               ...item,
-              dueDate: item.repeatDays.length > 0 ? item.dueDate : (skipped ? onDate : tomorrow),
               completedDates: complete
                 ? (item.repeatDays.length > 0 ? item.completedDates.filter((date) => date !== onDate) : [])
                 : item.completedDates,
@@ -268,8 +266,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       })
 
       if (skipped) setToast('Квест снова ожидает отметки')
-      else if (quest.repeatDays.length > 0) setToast('Повтор отмечен как пропущенный')
-      else setToast(`Не выполнено · квест перенесён на ${nextDateKey(onDate).split('-').reverse().slice(0, 2).join('.')}`)
+      else setToast('Не выполнено · не печалься, всё будет хорошо')
     }
 
     const closeDay = (onDate = dateKey()) => {
