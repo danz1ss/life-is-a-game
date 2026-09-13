@@ -1,6 +1,7 @@
 import type { AppState, Difficulty, Quest, Skill, SkillGoal } from './types'
 import { defaultSkillColors, migrateSkillColors } from './skillColors'
 import { normalizeBackground } from './appearance'
+import { assertValidState } from './stateValidation'
 
 export const goalCompletionReward = { xp: 150, gold: 30 }
 
@@ -46,14 +47,19 @@ export function longDateLabel(value = dateKey()) {
 }
 
 export function levelProgress(totalXp: number, base = 100, growth = 35) {
-  let level = 1
-  let remaining = Math.max(0, totalXp)
-  let needed = base
-  while (remaining >= needed) {
-    remaining -= needed
-    level += 1
-    needed = base + (level - 1) * growth
-  }
+  if (!Number.isFinite(base) || base <= 0 || !Number.isFinite(growth) || growth < 0) throw new RangeError('Некорректная шкала уровней')
+  const xp = Number.isFinite(totalXp) ? Math.max(0, totalXp) : 0
+  // Sum of the arithmetic progression for n completed levels.
+  const threshold = (n: number) => n * base + growth * n * (n - 1) / 2
+  const linear = base - growth / 2
+  let completed = growth === 0 ? Math.floor(xp / base)
+    : xp === 0 ? 0 : Math.floor(2 * xp / (linear + Math.sqrt(linear * linear + 2 * growth * xp)))
+  // Correct rounding at an exact level boundary without walking every prior level.
+  if (completed > 0 && threshold(completed) > xp) completed--
+  else if (threshold(completed + 1) <= xp) completed++
+  const level = completed + 1
+  const remaining = xp - threshold(completed)
+  const needed = base + completed * growth
   return {
     level,
     current: remaining,
@@ -70,7 +76,7 @@ export function isQuestForDate(quest: Quest, value: string) {
   if (quest.archivedAt) return false
   if (quest.skippedDates.includes(value)) return true
   const date = new Date(`${value}T12:00:00`)
-  if (quest.repeatDays.length > 0) return quest.repeatDays.includes(date.getDay())
+  if (quest.repeatDays.length > 0) return (!quest.dueDate || quest.dueDate <= value) && quest.repeatDays.includes(date.getDay())
   if (quest.dueDate) return quest.dueDate === value
   return false
 }
@@ -117,7 +123,7 @@ export function createInitialState(): AppState {
   const today = dateKey()
   const now = new Date().toISOString()
   return {
-    version: 4,
+    version: 5,
     profile: {
       name: 'Игрок',
       avatar: '⚔️',
@@ -147,6 +153,8 @@ export function createInitialState(): AppState {
       { id: 'reward-treat', title: 'Любимое угощение', description: '', icon: '☕', cost: 15, createdAt: now },
     ],
     history: [],
+    dayPlans: { [today]: { mainQuestId: 'quest-project', questOrder: [] } },
+    levelRewards: { highestLevel: 1, acknowledgedLevel: 1, personal: [] },
     preferences: { todayMode: 'list', background: 'minimalism' },
   }
 }
@@ -158,28 +166,44 @@ type StoredState = Partial<Omit<AppState, 'version' | 'quests' | 'preferences'>>
 }
 
 export function migrateState(value: unknown): AppState {
-  const fallback = createInitialState()
-  if (!value || typeof value !== 'object') return fallback
+  if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error('Некорректный файл сохранения')
   const stored = value as StoredState
-  if (!Array.isArray(stored.skills) || !Array.isArray(stored.quests)) return fallback
+  if (!Array.isArray(stored.skills) || !Array.isArray(stored.quests)) throw new Error('В сохранении отсутствуют навыки или квесты')
+  if (stored.version !== undefined && (!Number.isInteger(stored.version) || stored.version < 1 || stored.version > 5)) {
+    throw new Error('Неподдерживаемая версия сохранения')
+  }
+  if (stored.version === 5 && (!stored.dayPlans || !stored.levelRewards)) throw new Error('В сохранении отсутствуют планы дней или награды за уровни')
 
-  return {
-    version: 4,
-    profile: stored.profile ?? fallback.profile,
-    skills: (stored.version ?? 1) < 4 ? migrateSkillColors(stored.skills) : stored.skills,
-    quests: stored.quests.map((quest, index) => ({
-      ...quest,
-      order: typeof quest.order === 'number' ? quest.order : index,
-      skippedDates: Array.isArray(quest.skippedDates) ? quest.skippedDates : [],
-      archivedAt: quest.archivedAt ?? null,
-    })) as Quest[],
-    goals: Array.isArray(stored.goals) ? stored.goals : [],
-    rewards: Array.isArray(stored.rewards) ? stored.rewards : [],
-    history: Array.isArray(stored.history) ? stored.history : [],
+  const migrated = {
+    version: 5,
+    profile: stored.profile,
+    skills: stored.skills,
+    quests: stored.quests.map((quest, index) => {
+      if (!quest || typeof quest !== 'object') throw new Error('Некорректный квест в сохранении')
+      return {
+        ...quest,
+        order: quest.order === undefined ? index : quest.order,
+        skippedDates: quest.skippedDates === undefined ? [] : quest.skippedDates,
+        archivedAt: quest.archivedAt ?? null,
+      }
+    }),
+    goals: stored.goals ?? [],
+    rewards: stored.rewards,
+    history: stored.history,
+    dayPlans: stored.dayPlans ?? Object.fromEntries(stored.quests.filter((quest) => quest?.isMain && !quest.archivedAt)
+      .map((quest) => [quest.repeatDays?.length ? dateKey() : quest.dueDate ?? dateKey(), { mainQuestId: quest.id, questOrder: [] }])),
+    levelRewards: stored.levelRewards ?? {
+      highestLevel: levelProgress(stored.profile?.totalXp ?? 0).level,
+      acknowledgedLevel: levelProgress(stored.profile?.totalXp ?? 0).level,
+      personal: [],
+    },
     preferences: {
       ...stored.preferences,
       todayMode: stored.preferences?.todayMode === 'timeline' ? 'timeline' : 'list',
       background: normalizeBackground(stored.preferences?.background),
     },
   }
+  assertValidState(migrated)
+  if ((stored.version ?? 1) < 4) migrated.skills = migrateSkillColors(migrated.skills)
+  return migrated
 }

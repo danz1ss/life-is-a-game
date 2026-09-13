@@ -19,7 +19,7 @@ describe('persistent skill colour families', () => {
   it('migrates inherited colours without changing progress, tasks or skill data', () => {
     const old = legacyState()
     const next = migrateState(old)
-    expect(next.version).toBe(4)
+    expect(next.version).toBe(5)
     expect({ ...next, skills: undefined, version: undefined }).toEqual({ ...old, skills: undefined, version: undefined })
     expect(next.skills.map(({ color: _, ...skill }) => skill)).toEqual(old.skills.map(({ color: _, ...skill }) => skill))
     expect(next.skills.find((skill) => skill.id === 'career')?.color).toBe('#eab354')
@@ -51,11 +51,14 @@ describe('persistent skill colour families', () => {
 
   it('updates child shades when changing a direction, keeping unrelated skills intact', () => {
     const skills = migrateState(legacyState()).skills
+    const snapshot = structuredClone(skills)
     const updated = updateSkillColors(skills, 'career', { color: '#a88bde' })
     for (const skill of updated.filter((item) => item.parentId === 'career')) {
       expect(skillColorFamilies[1].colors).toContain(skill.color)
     }
     expect(updated.find((skill) => skill.id === 'sport')).toEqual(skills.find((skill) => skill.id === 'sport'))
     expect(new Set(updated.filter((skill) => skill.parentId === 'career' || skill.id === 'career').map((skill) => skill.color)).size).toBe(3)
+    expect(skills).toEqual(snapshot)
+    expect(updated.find((skill) => skill.id === 'sport')).toBe(skills.find((skill) => skill.id === 'sport'))
   })
 })

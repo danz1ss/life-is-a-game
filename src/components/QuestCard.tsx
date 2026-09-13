@@ -5,7 +5,7 @@ import type { DragEvent, ReactNode } from 'react'
 import { difficultyConfig, formatDuration, isQuestComplete, isQuestSkipped } from '../lib/game'
 import type { Quest, Skill } from '../lib/types'
 
-export function QuestCard({ quest, skill, goalTitle, date, onToggle, onSkip, onEdit, onDelete, onMakeMain, onReorder, compact = false, badge, footer }: {
+export function QuestCard({ quest, skill, goalTitle, date, onToggle, onSkip, onEdit, onDelete, onMakeMain, onReorder, compact = false, showResultActions = true, badge, footer }: {
   quest: Quest
   skill?: Skill
   goalTitle?: string
@@ -17,6 +17,7 @@ export function QuestCard({ quest, skill, goalTitle, date, onToggle, onSkip, onE
   onMakeMain?: () => void
   onReorder?: (sourceId: string, targetId: string, placement: 'before' | 'after') => void
   compact?: boolean
+  showResultActions?: boolean
   badge?: { label: string; tone: 'danger' | 'muted' | 'success' | 'violet' }
   footer?: ReactNode
 }) {
@@ -38,14 +39,14 @@ export function QuestCard({ quest, skill, goalTitle, date, onToggle, onSkip, onE
   return (
     <article className={`quest-card ${complete ? 'is-complete' : ''} ${skipped ? 'is-skipped' : ''} ${compact ? 'quest-card--compact' : ''}`} onDragOver={onReorder ? (event) => { event.preventDefault(); event.dataTransfer.dropEffect = 'move' } : undefined} onDrop={dropQuest}>
       {onReorder && <span className="quest-drag-handle" draggable onDragStart={startDrag} title="Перетащить квест" aria-label="Перетащить квест"><GripVertical size={17} /></span>}
-      <div className="quest-result-actions">
+      {showResultActions && <div className="quest-result-actions">
         <button className={`quest-check ${!onToggle ? 'quest-check--static' : ''}`} type="button" disabled={!onToggle} onClick={onToggle} aria-label={complete ? 'Вернуть квест' : 'Выполнить квест'} aria-pressed={complete}>
           <Check size={16} strokeWidth={2} />
         </button>
         {onSkip && <button className="quest-skip" type="button" onClick={onSkip} aria-label={skipped ? 'Снять отметку «не выполнено»' : 'Не выполнено сегодня'} aria-pressed={skipped} title={'Не выполнено сегодня'}>
           <X size={16} strokeWidth={2} />
         </button>}
-      </div>
+      </div>}
       <div className="quest-card__body">
         <div className="quest-card__topline">
           <h3>{quest.title}</h3>

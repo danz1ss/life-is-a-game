@@ -29,6 +29,7 @@ export interface Quest {
   description: string
   difficulty: Difficulty
   skillId: string | null
+  /** Scheduled day for a one-off quest, or the start date of a recurring series. */
   dueDate: string | null
   scheduledTime: string | null
   durationMinutes: number
@@ -67,7 +68,7 @@ export interface Reward {
 
 export interface HistoryEvent {
   id: string
-  type: 'quest' | 'reward' | 'goal'
+  type: 'quest' | 'reward' | 'goal' | 'level' | 'level-reward'
   date: string
   createdAt: string
   title: string
@@ -79,14 +80,32 @@ export interface HistoryEvent {
   gold: number
 }
 
+export interface DayPlan {
+  mainQuestId: string | null
+  questOrder: string[]
+}
+
+export interface PersonalLevelReward {
+  id: string
+  title: string
+  level: number
+  claimedAt: string | null
+}
+
 export interface AppState {
-  version: 4
+  version: 5
   profile: Profile
   skills: Skill[]
   quests: Quest[]
   goals: SkillGoal[]
   rewards: Reward[]
   history: HistoryEvent[]
+  dayPlans: Record<string, DayPlan>
+  levelRewards: {
+    highestLevel: number
+    acknowledgedLevel: number
+    personal: PersonalLevelReward[]
+  }
   preferences: {
     todayMode: 'list' | 'timeline'
     background: BackgroundTheme

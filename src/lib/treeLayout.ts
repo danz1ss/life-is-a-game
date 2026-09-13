@@ -7,13 +7,20 @@ export const toTreePosition = (position: Skill['position']) => ({ x: position.x 
 export const fromTreePosition = (position: Skill['position']) => ({ x: position.x / 1.4, y: position.y / 1.15 })
 
 export function descendantIds(skills: Skill[], id: string): Set<string> {
+  const children = new Map<string, string[]>()
+  for (const skill of skills) {
+    if (!skill.parentId) continue
+    const siblings = children.get(skill.parentId)
+    if (siblings) siblings.push(skill.id)
+    else children.set(skill.parentId, [skill.id])
+  }
   const result = new Set([id])
-  let changed = true
-  while (changed) {
-    changed = false
-    for (const skill of skills) if (skill.parentId && result.has(skill.parentId) && !result.has(skill.id)) {
-      result.add(skill.id)
-      changed = true
+  const pending = [id]
+  while (pending.length) {
+    for (const child of children.get(pending.pop()!) ?? []) {
+      if (result.has(child)) continue
+      result.add(child)
+      pending.push(child)
     }
   }
   return result

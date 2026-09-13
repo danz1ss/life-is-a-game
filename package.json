@@ -1,6 +1,6 @@
 {
   "name": "life-is-a-game",
-  "version": "0.7.1",
+  "version": "0.8.1",
   "private": true,
   "description": "Локальная RPG-система саморазвития",
   "main": "electron/main.cjs",
@@ -12,7 +12,8 @@
     "desktop": "node scripts/launch-electron.cjs --dist",
     "dist": "npm run build && electron-builder --win nsis",
     "typecheck": "tsc -b --pretty false",
-    "test": "vitest run"
+    "test": "vitest run",
+    "test:electron": "npm run build && node scripts/test-electron.cjs"
   },
   "build": {
     "appId": "local.lifeisagame.app",

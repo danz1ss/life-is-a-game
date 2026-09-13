@@ -1,21 +1,37 @@
-import { Archive, CalendarClock, CheckCircle2, ChevronRight, CircleAlert, Filter, Inbox, Plus, Repeat2, RotateCcw, Search } from 'lucide-react'
-import { useMemo, useState, type ReactNode } from 'react'
+import { Archive, CalendarClock, CheckCircle2, ChevronRight, CircleAlert, Filter, Plus, Repeat2, RotateCcw, Search } from 'lucide-react'
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { QuestCard } from '../components/QuestCard'
 import { QuestModal } from '../components/QuestModal'
 import { EmptyState, PageHeader } from '../components/Ui'
-import { activeGoalForSkill, dateKey, dateLabel, isQuestForDate, isQuestOverdue, isQuestSkipped, weekDays } from '../lib/game'
+import { activeGoalForSkill, dateLabel, formatDuration, isQuestForDate, isQuestOverdue, isQuestSkipped, nextDateKey, weekDays } from '../lib/game'
+import { questsForDay, upcomingQuests } from '../lib/planning'
 import { useStore } from '../lib/store'
 import type { Quest, QuestDraft } from '../lib/types'
 
 type QuestView = 'plan' | 'recurring' | 'archive'
 
-export function QuestsPage({ onNavigate }: { onNavigate: (page: string) => void }) {
-  const { state, addQuest, updateQuest, deleteQuest, archiveQuest, restoreQuest, toggleQuest, reorderQuest, setMainQuest } = useStore()
+export function QuestsPage({ onNavigate, focusTomorrow = 0 }: { onNavigate: (page: string) => void; focusTomorrow?: number }) {
+  const { state, today, addQuest, updateQuest, deleteQuest, archiveQuest, restoreQuest, toggleQuest, reorderQuest, setMainQuest } = useStore()
   const [modal, setModal] = useState<Quest | 'new' | null>(null)
   const [view, setView] = useState<QuestView>('plan')
   const [skillFilter, setSkillFilter] = useState('')
   const [query, setQuery] = useState('')
-  const today = dateKey()
+  const tomorrow = nextDateKey(today)
+  const [editDate, setEditDate] = useState(today)
+  const tomorrowSection = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!focusTomorrow) return
+    setView('plan')
+    const timer = window.setTimeout(() => tomorrowSection.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50)
+    return () => window.clearTimeout(timer)
+  }, [focusTomorrow])
+
+  const openNew = (date: string) => { setEditDate(date); setModal('new') }
+  const openEdit = (quest: Quest, date: string) => {
+    setEditDate(date)
+    setModal({ ...quest, isMain: state.dayPlans[date]?.mainQuestId === quest.id })
+  }
 
   const filtered = useMemo(() => state.quests.filter((quest) => {
     if (query && !`${quest.title} ${quest.description}`.toLowerCase().includes(query.toLowerCase())) return false
@@ -27,34 +43,35 @@ export function QuestsPage({ onNavigate }: { onNavigate: (page: string) => void 
   const todayCompleted = todayQuests.filter((quest) => quest.completedDates.includes(today) || (quest.repeatDays.length === 0 && quest.completedDates.length > 0)).length
   const todaySkipped = todayQuests.filter((quest) => isQuestSkipped(quest, today)).length
   const overdue = filtered.filter((quest) => isQuestOverdue(quest, today))
-  const upcoming = filtered.filter((quest) => !quest.archivedAt && quest.repeatDays.length === 0 && quest.completedDates.length === 0 && Boolean(quest.dueDate && quest.dueDate > today))
-  const undated = filtered.filter((quest) => !quest.archivedAt && quest.repeatDays.length === 0 && quest.completedDates.length === 0 && !quest.dueDate)
+  const upcoming = upcomingQuests(filtered, tomorrow)
+  const tomorrowAll = useMemo(() => questsForDay(state, tomorrow), [state, tomorrow])
+  const filteredIds = new Set(filtered.map((quest) => quest.id))
+  const tomorrowQuests = tomorrowAll.filter((quest) => filteredIds.has(quest.id))
   const recurring = filtered.filter((quest) => !quest.archivedAt && quest.repeatDays.length > 0)
   const archived = filtered.filter((quest) => Boolean(quest.archivedAt) || (quest.repeatDays.length === 0 && quest.completedDates.length > 0))
 
   const save = (draft: QuestDraft) => {
-    if (modal === 'new') addQuest(draft)
-    else if (modal) updateQuest(modal.id, draft)
+    if (modal === 'new') addQuest(draft, editDate)
+    else if (modal) updateQuest(modal.id, draft, editDate)
     setModal(null)
   }
 
   const questCard = (quest: Quest, badge?: { label: string; tone: 'danger' | 'muted' | 'success' | 'violet' }, footer?: ReactNode, allowToggle = true) => <QuestCard
     key={quest.id}
-    quest={quest}
+    quest={{ ...quest, isMain: state.dayPlans[quest.repeatDays.length ? today : quest.dueDate ?? today]?.mainQuestId === quest.id }}
     skill={state.skills.find((skill) => skill.id === quest.skillId)}
     goalTitle={quest.skillId ? activeGoalForSkill(state.goals, quest.skillId)?.title : undefined}
     date={quest.repeatDays.length > 0 ? today : quest.dueDate ?? quest.completedDates[0] ?? today}
     onToggle={allowToggle ? () => toggleQuest(quest.id, today) : undefined}
-    onEdit={() => setModal(quest)}
-    onMakeMain={!quest.archivedAt && quest.completedDates.length === 0 ? () => setMainQuest(quest.id) : undefined}
-    onReorder={reorderQuest}
+    onEdit={() => openEdit(quest, quest.repeatDays.length ? today : quest.dueDate ?? today)}
+    onMakeMain={!quest.archivedAt && quest.completedDates.length === 0 && (quest.dueDate || isQuestForDate(quest, today)) ? () => setMainQuest(quest.id, quest.repeatDays.length ? today : quest.dueDate ?? today) : undefined}
     onDelete={() => deleteQuest(quest.id)}
     badge={badge}
     footer={footer}
   />
 
   return <div className="page">
-    <PageHeader eyebrow="Центр планирования" title="Квесты" description="Здесь вы решаете, что делать дальше. Экран «Сегодня» остаётся чистым местом для выполнения выбранных задач." actions={<button className="button button--primary" onClick={() => setModal('new')}><Plus size={18} /> Новый квест</button>} />
+    <PageHeader eyebrow="Центр планирования" title="Квесты" description="Подготовьте завтра и сохраните идеи на будущее. Сегодняшние задачи — на главной странице." actions={<button className="button button--primary" onClick={() => openNew(tomorrow)}><Plus size={18} /> Новый квест</button>} />
 
     <button className="today-quest-summary panel" onClick={() => onNavigate('today')}>
       <span className="today-quest-summary__icon"><CheckCircle2 size={20} /></span>
@@ -75,20 +92,39 @@ export function QuestsPage({ onNavigate }: { onNavigate: (page: string) => void 
     </div>
 
     {view === 'plan' && <div className="quest-sections">
+      <div ref={tomorrowSection} id="tomorrow-plan" className="tomorrow-plan">
+        <QuestSection icon={<CalendarClock size={17} />} title={`Завтра · ${dateLabel(tomorrow)}`} subtitle={`${tomorrowAll.length} задач · ${formatDuration(tomorrowAll.reduce((sum, quest) => sum + quest.durationMinutes, 0))} · план сохраняется автоматически`}
+          actions={<button className="button button--primary" onClick={() => openNew(tomorrow)}><Plus size={16} /> Добавить на завтра</button>}>
+          {tomorrowQuests.length ? tomorrowQuests.map((quest) => <QuestCard key={quest.id} quest={quest} date={tomorrow}
+            skill={state.skills.find((skill) => skill.id === quest.skillId)}
+            goalTitle={quest.skillId ? activeGoalForSkill(state.goals, quest.skillId)?.title : undefined}
+            onEdit={() => openEdit(quest, tomorrow)} onDelete={() => deleteQuest(quest.id)}
+            onMakeMain={() => setMainQuest(quest.id, tomorrow)}
+            onReorder={(source, target, placement) => reorderQuest(source, target, placement, tomorrow)}
+            badge={quest.repeatDays.length ? { label: 'По расписанию', tone: 'violet' } : undefined}
+            compact showResultActions={false}
+          />) : <SectionEmpty text={query || skillFilter ? 'Нет задач, подходящих под фильтры.' : 'Завтра пока свободно. Добавьте задачу или перенесите её из предстоящих.'} />}
+        </QuestSection>
+      </div>
+      <QuestSection icon={<CalendarClock size={17} />} title="Предстоящие" subtitle="С послезавтра и дальше — по датам, затем идеи без даты">
+        {upcoming.length > 0 ? upcoming.map((quest) => <QuestCard key={quest.id} quest={quest}
+          skill={state.skills.find((skill) => skill.id === quest.skillId)}
+          goalTitle={quest.skillId ? activeGoalForSkill(state.goals, quest.skillId)?.title : undefined}
+          date={quest.dueDate ?? today}
+          onEdit={() => openEdit(quest, quest.dueDate ?? today)} onDelete={() => deleteQuest(quest.id)}
+          badge={{ label: quest.dueDate ? dateLabel(quest.dueDate) : 'Без даты', tone: quest.dueDate ? 'violet' : 'muted' }}
+          compact showResultActions={false}
+        />) : <SectionEmpty text="Будущих задач и идей пока нет." />}
+      </QuestSection>
       {overdue.length > 0 && <QuestSection icon={<CircleAlert size={17} />} title="Требуют решения" subtitle="Невыполненные одноразовые квесты не переносятся автоматически" tone="danger">
         {overdue.map((quest) => questCard(quest, { label: `План: ${dateLabel(quest.dueDate!)}`, tone: 'danger' }, <div className="overdue-actions">
           <button className="mini-action mini-action--primary" onClick={() => updateQuest(quest.id, { dueDate: today })}>На сегодня</button>
-          <button className="mini-action" onClick={() => setModal(quest)}>Другая дата</button>
+          <button className="mini-action" onClick={() => updateQuest(quest.id, { dueDate: tomorrow })}>На завтра</button>
+          <button className="mini-action" onClick={() => openEdit(quest, quest.dueDate ?? today)}>Другая дата</button>
           <button className="mini-action" onClick={() => toggleQuest(quest.id, today)}>Выполнить сейчас</button>
           <button className="mini-action mini-action--muted" onClick={() => archiveQuest(quest.id)}>Отказаться</button>
         </div>))}
       </QuestSection>}
-      <QuestSection icon={<CalendarClock size={17} />} title="Предстоящие" subtitle="То, что уже назначено на будущую дату">
-        {upcoming.length > 0 ? upcoming.map((quest) => questCard(quest, { label: dateLabel(quest.dueDate!), tone: 'violet' })) : <SectionEmpty text="Будущих квестов пока нет." />}
-      </QuestSection>
-      <QuestSection icon={<Inbox size={17} />} title="Без даты" subtitle="Идеи и задачи, которые ещё не попали в расписание">
-        {undated.length > 0 ? undated.map((quest) => questCard(quest, { label: 'Не запланирован', tone: 'muted' })) : <SectionEmpty text="Все квесты разобраны и запланированы." />}
-      </QuestSection>
     </div>}
 
     {view === 'recurring' && <section className="quests-board panel">
@@ -104,12 +140,12 @@ export function QuestsPage({ onNavigate }: { onNavigate: (page: string) => void 
       {archived.length === 0 ? <EmptyState icon="◇" title="Архив пуст" text="Здесь появятся завершённые и отменённые квесты." /> : <div className="quest-list quest-list--roomy">{archived.map((quest) => questCard(quest, quest.completedDates.length > 0 ? { label: 'Выполнен', tone: 'success' } : { label: 'Отменён', tone: 'muted' }, quest.archivedAt && quest.completedDates.length === 0 ? <div className="overdue-actions"><button className="mini-action" onClick={() => restoreQuest(quest.id)}><RotateCcw size={12} /> Вернуть на сегодня</button></div> : undefined, quest.completedDates.length > 0))}</div>}
     </section>}
 
-    {modal && <QuestModal quest={modal === 'new' ? null : modal} skills={state.skills} onSave={save} onDelete={modal !== 'new' ? () => { deleteQuest(modal.id); setModal(null) } : undefined} onClose={() => setModal(null)} />}
+    {modal && <QuestModal quest={modal === 'new' ? null : modal} initialDate={editDate} skills={state.skills} onSave={save} onDelete={modal !== 'new' ? () => { deleteQuest(modal.id); setModal(null) } : undefined} onClose={() => setModal(null)} />}
   </div>
 }
 
-function QuestSection({ icon, title, subtitle, tone, children }: { icon: ReactNode; title: string; subtitle: string; tone?: 'danger'; children: ReactNode }) {
-  return <section className={`quest-section panel ${tone ? `quest-section--${tone}` : ''}`}><header><span className="quest-section__icon">{icon}</span><div><h2>{title}</h2><p>{subtitle}</p></div></header><div className="quest-list quest-list--roomy">{children}</div></section>
+function QuestSection({ icon, title, subtitle, tone, children, actions }: { icon: ReactNode; title: string; subtitle: string; tone?: 'danger'; children: ReactNode; actions?: ReactNode }) {
+  return <section className={`quest-section panel ${tone ? `quest-section--${tone}` : ''}`}><header><span className="quest-section__icon">{icon}</span><div><h2>{title}</h2><p>{subtitle}</p></div>{actions && <div className="quest-section-actions">{actions}</div>}</header><div className="quest-list quest-list--roomy">{children}</div></section>
 }
 
 function SectionEmpty({ text }: { text: string }) {

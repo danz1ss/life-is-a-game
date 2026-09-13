@@ -4,19 +4,17 @@ import { SkillIcon } from '../components/SkillIcon'
 import { QuestCard } from '../components/QuestCard'
 import { QuestModal } from '../components/QuestModal'
 import { EmptyState, Modal, ProgressBar } from '../components/Ui'
-import { activeGoalForSkill, calculateStreak, dateKey, dateLabel, difficultyConfig, formatDuration, isQuestComplete, isQuestForDate, isQuestOverdue, isQuestSkipped, levelProgress, longDateLabel, nextDateKey, skillLevel } from '../lib/game'
+import { activeGoalForSkill, calculateStreak, dateLabel, difficultyConfig, formatDuration, isQuestComplete, isQuestOverdue, isQuestSkipped, levelProgress, longDateLabel, nextDateKey, skillLevel } from '../lib/game'
 import { useStore } from '../lib/store'
 import type { Quest, QuestDraft, Skill } from '../lib/types'
+import { questsForDay } from '../lib/planning'
 
 export function DashboardPage({ onNavigate, onOpenSkill }: { onNavigate: (page: string) => void; onOpenSkill: (skillId: string) => void }) {
-  const { state, addQuest, updateQuest, deleteQuest, toggleQuest, skipQuest, closeDay, reorderQuest, setMainQuest, setTodayMode } = useStore()
+  const { state, today, addQuest, updateQuest, deleteQuest, toggleQuest, skipQuest, closeDay, reorderQuest, setMainQuest, setTodayMode } = useStore()
   const [questModal, setQuestModal] = useState<Quest | 'new' | null>(null)
   const [mainQuestPickerOpen, setMainQuestPickerOpen] = useState(false)
   const [newQuestAsMain, setNewQuestAsMain] = useState(false)
-  const today = dateKey()
-  const todayQuests = useMemo(() => state.quests
-    .filter((quest) => isQuestForDate(quest, today))
-    .sort((a, b) => a.order - b.order), [state.quests, today])
+  const todayQuests = useMemo(() => questsForDay(state, today), [state, today])
   const mainQuest = todayQuests.find((quest) => quest.isMain) ?? null
   const profileLevel = levelProgress(state.profile.totalXp)
   const completed = todayQuests.filter((quest) => isQuestComplete(quest, today)).length
@@ -49,7 +47,7 @@ export function DashboardPage({ onNavigate, onOpenSkill }: { onNavigate: (page: 
           <h1>Ваше приключение продолжается</h1>
           <p>{pendingQuests.length === 0 && todayQuests.length > 0 ? `День разобран: выполнено ${completed}, не выполнено ${skipped} · получено ${xpToday} XP` : `Выполнено ${completed} · не выполнено ${skipped} · осталось ${pendingQuests.length} · получено ${xpToday} XP`}</p>
         </div>
-        <button className="button button--primary" type="button" onClick={() => openNewQuest()}><Plus size={18} /> Новый квест</button>
+        <div className="dashboard-plan-actions"><button className="button button--secondary" type="button" onClick={() => onNavigate('tomorrow')}><CalendarDays size={17} /> Спланировать завтра</button><button className="button button--primary" type="button" onClick={() => openNewQuest()}><Plus size={18} /> Новый квест</button></div>
       </header>
 
       {overdueCount > 0 && <button className="dashboard-review" onClick={() => onNavigate('quests')}><CircleAlert size={17} /><span><strong>{overdueCount} {overdueCount === 1 ? 'квест требует' : 'квеста требуют'} решения</strong><small>Они не перенесены автоматически — разберите их в планировщике.</small></span><ChevronRight size={17} /></button>}
@@ -88,7 +86,7 @@ export function DashboardPage({ onNavigate, onOpenSkill }: { onNavigate: (page: 
           </div>
           {pendingQuests.length > 0 ? <div className="day-review-bar">
             <div><strong>{pendingQuests.length} без отметки</strong><small>{pendingOneTime > 0 ? `${pendingOneTime} ${pendingOneTime === 1 ? 'задача перенесётся' : 'задачи перенесутся'} на ${nextDateKey(today).split('-').reverse().slice(0, 2).join('.')}` : 'Одноразовых задач для переноса нет'}{pendingRecurring > 0 ? ` · ${pendingRecurring} ${pendingRecurring === 1 ? 'повтор отметится' : 'повтора отметятся'} как пропущенные` : ''}</small></div>
-            <button className="button button--secondary" type="button" onClick={() => closeDay(today)}>Закрыть день</button>
+            <button className="button button--secondary" type="button" onClick={() => { closeDay(today); onNavigate('tomorrow') }}>Закрыть день и спланировать завтра</button>
           </div> : todayQuests.length > 0 && <div className="day-review-bar day-review-bar--done"><CheckCircle2 size={18} /><div><strong>Все квесты разобраны</strong><small>Можно спокойно завершать день.</small></div></div>}
           {todayQuests.length === 0 ? <EmptyState icon="☀" title="Свободный день" text="На сегодня ещё нет квестов." /> : state.preferences.todayMode === 'list' ? (
             <div className="quest-list">{todayQuests.map((quest) => <QuestCard key={quest.id} quest={quest} skill={state.skills.find((skill) => skill.id === quest.skillId)} goalTitle={quest.skillId ? activeGoalForSkill(state.goals, quest.skillId)?.title : undefined} date={today} onToggle={() => toggleQuest(quest.id, today)} onSkip={() => skipQuest(quest.id, today)} onEdit={() => setQuestModal(quest)} onDelete={() => deleteQuest(quest.id)} onMakeMain={!isQuestComplete(quest, today) && !isQuestSkipped(quest, today) ? () => setMainQuest(quest.id) : undefined} onReorder={reorderQuest} compact />)}</div>
@@ -134,7 +132,7 @@ export function DashboardPage({ onNavigate, onOpenSkill }: { onNavigate: (page: 
       </section>
 
       {mainQuestPickerOpen && <MainQuestPicker quests={todayQuests} skills={state.skills} selectedId={mainQuest?.id ?? null} date={today} onSelect={(id) => { setMainQuest(id); setMainQuestPickerOpen(false) }} onCreate={() => { setMainQuestPickerOpen(false); openNewQuest(true) }} onClose={() => setMainQuestPickerOpen(false)} />}
-      {questModal && <QuestModal quest={questModal === 'new' ? null : questModal} skills={state.skills} initialIsMain={questModal === 'new' && newQuestAsMain} onSave={saveQuest} onDelete={questModal !== 'new' ? () => { deleteQuest(questModal.id); setQuestModal(null) } : undefined} onClose={() => { setQuestModal(null); setNewQuestAsMain(false) }} />}
+      {questModal && <QuestModal quest={questModal === 'new' ? null : questModal} skills={state.skills} initialDate={today} initialIsMain={questModal === 'new' && newQuestAsMain} onSave={saveQuest} onDelete={questModal !== 'new' ? () => { deleteQuest(questModal.id); setQuestModal(null) } : undefined} onClose={() => { setQuestModal(null); setNewQuestAsMain(false) }} />}
     </div>
   )
 }
@@ -172,7 +170,7 @@ function MainQuestPicker({ quests, skills, selectedId, date, onSelect, onCreate,
 
 function MainQuest({ quest, skill, goalTitle, onToggle }: { quest: Quest; skill?: Skill; goalTitle?: string; onToggle: () => void }) {
   const reward = difficultyConfig[quest.difficulty]
-  const today = dateKey()
+  const { today } = useStore()
   const complete = isQuestComplete(quest, today)
   const skipped = isQuestSkipped(quest, today)
   return (

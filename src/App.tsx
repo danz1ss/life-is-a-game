@@ -1,14 +1,17 @@
 import { Check, ChevronRight, CloudOff, Coins, GitBranch, LayoutDashboard, ListChecks, Palette, Save, TrendingUp, Trash2, Undo2, X } from 'lucide-react'
-import { useCallback, useEffect, useState } from 'react'
+import { lazy, Suspense, useCallback, useEffect, useState } from 'react'
 import { AppearanceModal } from './components/AppearanceModal'
 import { backgroundThemes } from './lib/appearance'
 import './backgrounds.css'
+import './planningRewards.css'
 import { useStore } from './lib/store'
 import { DashboardPage } from './pages/DashboardPage'
-import { ProgressPage } from './pages/ProgressPage'
 import { QuestsPage } from './pages/QuestsPage'
 import { RewardsPage } from './pages/RewardsPage'
-import { TreePage } from './pages/TreePage'
+import { LevelUpModal } from './components/LevelRewards'
+
+const ProgressPage = lazy(() => import('./pages/ProgressPage').then((module) => ({ default: module.ProgressPage })))
+const TreePage = lazy(() => import('./pages/TreePage').then((module) => ({ default: module.TreePage })))
 
 const navigation = [
   { id: 'today', label: 'Сегодня', icon: LayoutDashboard },
@@ -22,12 +25,14 @@ export function App() {
   const [page, setPage] = useState('today')
   const [treeFocusSkillId, setTreeFocusSkillId] = useState<string | null>(null)
   const [appearanceOpen, setAppearanceOpen] = useState(false)
+  const [plannerFocus, setPlannerFocus] = useState(0)
   const closeAppearance = useCallback(() => setAppearanceOpen(false), [])
   const { state, saveStatus, toast, dismissToast, deletedQuest, undoDeleteQuest, dismissDeletedQuests, setBackground } = useStore()
 
   const navigate = (nextPage: string) => {
     setTreeFocusSkillId(null)
-    setPage(nextPage)
+    setPlannerFocus(nextPage === 'tomorrow' ? (value) => value + 1 : 0)
+    setPage(nextPage === 'tomorrow' ? 'quests' : nextPage)
   }
 
   const openSkill = (skillId: string) => {
@@ -61,13 +66,16 @@ export function App() {
         </div>
       </aside>
       <main className="main-content">
-        {page === 'today' && <DashboardPage onNavigate={navigate} onOpenSkill={openSkill} />}
-        {page === 'quests' && <QuestsPage onNavigate={navigate} />}
-        {page === 'tree' && <TreePage initialSelectedId={treeFocusSkillId} />}
-        {page === 'progress' && <ProgressPage />}
-        {page === 'rewards' && <RewardsPage />}
+        <Suspense fallback={<div className="app-loading" role="status"><p>Загружаем страницу…</p></div>}>
+          {page === 'today' && <DashboardPage onNavigate={navigate} onOpenSkill={openSkill} />}
+          {page === 'quests' && <QuestsPage onNavigate={navigate} focusTomorrow={plannerFocus} />}
+          {page === 'tree' && <TreePage initialSelectedId={treeFocusSkillId} />}
+          {page === 'progress' && <ProgressPage />}
+          {page === 'rewards' && <RewardsPage />}
+        </Suspense>
       </main>
       {appearanceOpen && <AppearanceModal selected={state.preferences.background} onChange={setBackground} onClose={closeAppearance} />}
+      <LevelUpModal />
       {toast && <div className="game-toast"><span>✦</span><strong>{toast}</strong></div>}
       {deletedQuest && <div className={`delete-toast ${toast ? 'delete-toast--raised' : ''}`}>
         <Trash2 size={18} />

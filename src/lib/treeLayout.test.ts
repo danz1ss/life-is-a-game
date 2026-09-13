@@ -3,6 +3,11 @@ import { createInitialState, migrateState } from './game'
 import { descendantIds, fromTreePosition, nextSkillPosition, toTreePosition } from './treeLayout'
 
 describe('дерево навыков', () => {
+  it('handles a long reversed chain without rescanning the entire tree for each level', () => {
+    const sample = createInitialState().skills[0]
+    const skills = Array.from({ length: 10_000 }, (_, index) => ({ ...sample, id: String(index), parentId: index ? String(index - 1) : null })).reverse()
+    expect(descendantIds(skills, '0').size).toBe(10_000)
+  })
   it('создаёт три направления, у карьеры только программирование', () => {
     const { skills } = createInitialState()
     expect(skills.filter(skill => !skill.parentId).map(skill => skill.name)).toEqual(['Здоровье', 'Развитие', 'Карьера'])

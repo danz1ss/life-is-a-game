@@ -4,6 +4,7 @@ import { RewardModal } from '../components/RewardModal'
 import { EmptyState, PageHeader } from '../components/Ui'
 import { useStore } from '../lib/store'
 import type { Reward, RewardDraft } from '../lib/types'
+import { LevelBadges, LevelRewardsPanel } from '../components/LevelRewards'
 
 export function RewardsPage() {
   const { state, addReward, updateReward, deleteReward, redeemReward, updateProfile, exportBackup, importBackup } = useStore()
@@ -12,6 +13,33 @@ export function RewardsPage() {
   const [avatar, setAvatar] = useState(state.profile.avatar)
   const [storagePath, setStoragePath] = useState('Локальное хранилище приложения')
   const [message, setMessage] = useState('')
+  const [backupBusy, setBackupBusy] = useState(false)
+
+  useEffect(() => {
+    setName(state.profile.name)
+    setAvatar(state.profile.avatar)
+  }, [state.profile.name, state.profile.avatar])
+
+  useEffect(() => {
+    if (!message) return
+    const timer = window.setTimeout(() => setMessage(''), 4000)
+    return () => window.clearTimeout(timer)
+  }, [message])
+
+  const runBackup = async (operation: 'export' | 'import') => {
+    if (backupBusy) return
+    if (operation === 'import' && !window.confirm('Текущие данные будут заменены содержимым резервной копии. Продолжить?')) return
+    setBackupBusy(true)
+    try {
+      if (operation === 'export') {
+        if (await exportBackup()) setMessage('Резервная копия сохранена')
+      } else if (await importBackup()) setMessage('Данные восстановлены')
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : 'Не удалось обработать резервную копию')
+    } finally {
+      setBackupBusy(false)
+    }
+  }
 
   useEffect(() => {
     window.lifeGame?.getStorageInfo().then((info) => setStoragePath(info.databasePath)).catch(() => undefined)
@@ -30,6 +58,7 @@ export function RewardsPage() {
 
   return <div className="page rewards-page">
     <PageHeader eyebrow="Личные сокровища" title="Награды" description="Обменивайте заработанное золото на приятные вещи, которые выбрали сами." actions={<div className="wallet"><Coins size={19} /><strong>{state.profile.gold}</strong><span>золота</span></div>} />
+    <LevelRewardsPanel />
     <div className="rewards-heading"><h2>Магазин наград</h2><button className="button button--secondary" onClick={() => setModal('new')}><Plus size={17} /> Добавить награду</button></div>
     {state.rewards.length === 0 ? <EmptyState icon="🎁" title="Магазин пуст" text="Добавьте то, чем хотите честно награждать себя за прогресс." /> : <section className="rewards-grid">{state.rewards.map((reward) => {
       const affordable = state.profile.gold >= reward.cost
@@ -38,6 +67,7 @@ export function RewardsPage() {
 
     <section className="settings-section">
       <div className="section-heading"><span className="eyebrow">Локальные настройки</span><h2>Профиль и данные</h2></div>
+      <LevelBadges />
       <div className="settings-grid">
         <article className="panel profile-settings">
           <div className="settings-icon"><span>{avatar || '⚔️'}</span></div>
@@ -47,11 +77,11 @@ export function RewardsPage() {
           <div className="data-settings__head"><span className="settings-icon settings-icon--small"><Database size={22} /></span><div><h3>Локальная база</h3><p><ShieldCheck size={14} /> Только на этом компьютере</p></div></div>
           <code title={storagePath}>{storagePath}</code>
           <p className="data-description">Приложение блокирует внешние сетевые запросы. Резервная копия содержит профиль, квесты, дерево и историю.</p>
-          <div className="data-actions"><button className="button button--secondary" onClick={async () => { const path = await exportBackup(); if (path) setMessage('Резервная копия сохранена') }}><Download size={16} /> Экспорт</button><button className="button button--ghost" onClick={async () => { if (window.confirm('Текущие данные будут заменены содержимым резервной копии. Продолжить?') && await importBackup()) setMessage('Данные восстановлены') }}><Upload size={16} /> Импорт</button></div>
+          <div className="data-actions"><button className="button button--secondary" disabled={backupBusy} onClick={() => void runBackup('export')}><Download size={16} /> Экспорт</button><button className="button button--ghost" disabled={backupBusy || !window.lifeGame} onClick={() => void runBackup('import')}><Upload size={16} /> Импорт</button></div>
         </article>
       </div>
     </section>
-    {message && <div className="inline-toast" onAnimationEnd={() => window.setTimeout(() => setMessage(''), 1200)}>{message}</div>}
+    {message && <div className="inline-toast" role="status">{message}</div>}
     {modal && <RewardModal reward={modal === 'new' ? null : modal} onSave={save} onClose={() => setModal(null)} />}
   </div>
 }

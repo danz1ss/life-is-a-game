@@ -1,4 +1,5 @@
 import type { Skill } from './types'
+import { descendantIds } from './treeLayout'
 
 export const skillColorFamilies = [
   { name: 'Зелёная', legacy: '#53d6a1', colors: ['#62bf91', '#b1d88c', '#7ad3b3', '#87ba77', '#b1e2bb', '#59ac83'] },
@@ -47,22 +48,15 @@ export function suggestSkillColor(parentId: string | null, skills: Skill[], excl
 
 export function updateSkillColors(skills: Skill[], id: string, patch: Partial<Skill>): Skill[] {
   const original = skills.find((skill) => skill.id === id)
-  const updated = skills.map((skill) => skill.id === id ? { ...skill, ...patch } : { ...skill })
-  if (!original) return updated
+  if (!original) return skills
+  const updated = skills.map((skill) => skill.id === id ? { ...skill, ...patch } : skill)
   const oldPalette = skillFamilyColors(skillRoot(original, skills).color)
   const newPalette = skillFamilyColors(skillRoot(updated.find((skill) => skill.id === id)!, updated).color)
   if (oldPalette[0] === newPalette[0]) return updated
-  const descendants = new Set([id])
-  let changed = true
-  while (changed) {
-    changed = false
-    for (const skill of updated) if (skill.parentId && descendants.has(skill.parentId) && !descendants.has(skill.id)) {
-      descendants.add(skill.id)
-      changed = true
-    }
-  }
+  const descendants = descendantIds(updated, id)
+  const indexes = new Map(updated.map((skill, index) => [skill.id, index]))
   for (const skill of updated.filter((item) => item.id !== id && descendants.has(item.id) && oldPalette.includes(item.color)).sort((a, b) => a.id.localeCompare(b.id))) {
-    skill.color = suggestSkillColor(skill.parentId, updated, skill.id)
+    updated[indexes.get(skill.id)!] = { ...skill, color: suggestSkillColor(skill.parentId, updated, skill.id) }
   }
   return updated
 }

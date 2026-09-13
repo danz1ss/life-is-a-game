@@ -1,13 +1,14 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { CalendarDays, Clock3, Flag, Repeat2, Sparkles, Trash2 } from 'lucide-react'
-import { dateKey, difficultyConfig, weekDays } from '../lib/game'
+import { dateKey, difficultyConfig, formatDuration, weekDays } from '../lib/game'
 import type { Difficulty, Quest, QuestDraft, Skill } from '../lib/types'
 import { Modal } from './Ui'
 
-export function QuestModal({ quest, skills, initialIsMain = false, onSave, onClose, onDelete }: {
+export function QuestModal({ quest, skills, initialIsMain = false, initialDate, onSave, onClose, onDelete }: {
   quest?: Quest | null
   skills: Skill[]
   initialIsMain?: boolean
+  initialDate?: string
   onSave: (draft: QuestDraft) => void
   onClose: () => void
   onDelete?: () => void
@@ -21,26 +22,28 @@ export function QuestModal({ quest, skills, initialIsMain = false, onSave, onClo
   const [durationMinutes, setDurationMinutes] = useState(30)
   const [repeatDays, setRepeatDays] = useState<number[]>([])
   const [isMain, setIsMain] = useState(false)
+  const mainDate = repeatDays.length ? initialDate ?? dateKey() : dueDate
+  const canBeMain = Boolean(mainDate) && (!repeatDays.length || ((!dueDate || dueDate <= mainDate) && repeatDays.includes(new Date(`${mainDate}T12:00:00`).getDay())))
 
   useEffect(() => {
     setTitle(quest?.title ?? '')
     setDescription(quest?.description ?? '')
     setDifficulty(quest?.difficulty ?? 'medium')
     setSkillId(quest?.skillId ?? '')
-    setDueDate(quest?.dueDate ?? dateKey())
+    setDueDate(quest ? quest.dueDate ?? '' : initialDate ?? dateKey())
     setScheduledTime(quest?.scheduledTime ?? '')
     setDurationMinutes(quest?.durationMinutes ?? 30)
     setRepeatDays(quest?.repeatDays ?? [])
     setIsMain(quest?.isMain ?? initialIsMain)
-  }, [initialIsMain, quest])
+  }, [initialIsMain, initialDate, quest])
 
   const submit = (event: FormEvent) => {
     event.preventDefault()
     if (!title.trim()) return
     onSave({
       title: title.trim(), description: description.trim(), difficulty, skillId: skillId || null,
-      dueDate: repeatDays.length > 0 ? null : (dueDate || null), scheduledTime: scheduledTime || null,
-      durationMinutes: Math.max(5, durationMinutes), repeatDays, isMain,
+      dueDate: dueDate || null, scheduledTime: scheduledTime || null,
+      durationMinutes: Math.max(5, durationMinutes), repeatDays, isMain: isMain && canBeMain,
     })
   }
 
@@ -86,13 +89,13 @@ export function QuestModal({ quest, skills, initialIsMain = false, onSave, onClo
         <label className="field">
           <span><Clock3 size={15} /> Продолжительность</span>
           <select value={durationMinutes} onChange={(event) => setDurationMinutes(Number(event.target.value))}>
-            {[10, 15, 20, 30, 45, 60, 90, 120, 180].map((minutes) => <option key={minutes} value={minutes}>{minutes < 60 ? `${minutes} минут` : `${minutes / 60} ч${minutes % 60 ? ' 30 мин' : ''}`}</option>)}
+            {[10, 15, 20, 30, 45, 60, 90, 120, 180].map((minutes) => <option key={minutes} value={minutes}>{formatDuration(minutes)}</option>)}
           </select>
         </label>
 
         <label className="field">
-          <span><CalendarDays size={15} /> Дата</span>
-          <input type="date" value={dueDate} disabled={repeatDays.length > 0} onChange={(event) => setDueDate(event.target.value)} />
+          <span><CalendarDays size={15} /> {repeatDays.length ? 'Начало повторений' : 'Дата'}</span>
+          <input type="date" value={dueDate} onChange={(event) => setDueDate(event.target.value)} />
         </label>
 
         <label className="field">
@@ -108,8 +111,8 @@ export function QuestModal({ quest, skills, initialIsMain = false, onSave, onClo
         </fieldset>
 
         <label className="check-field field--full">
-          <input type="checkbox" checked={isMain} onChange={(event) => setIsMain(event.target.checked)} />
-          <span><strong>Сделать главным квестом</strong><small>Он появится в выделенном блоке на экране «Сегодня».</small></span>
+          <input type="checkbox" checked={isMain && canBeMain} disabled={!canBeMain} onChange={(event) => setIsMain(event.target.checked)} />
+          <span><strong>Сделать главным квестом дня</strong><small>{repeatDays.length ? `Для даты ${initialDate ?? dateKey()}. Изменение времени и дней повторения применяется ко всей серии.` : 'Для выбранной даты. Главные квесты других дней сохранятся.'}</small></span>
         </label>
 
         <footer className="form-actions field--full">

@@ -6,7 +6,7 @@ import { SkillModal } from '../components/SkillModal'
 import { SkillIcon } from '../components/SkillIcon'
 import { PageHeader, ProgressBar } from '../components/Ui'
 import { activeGoalForSkill, dateLabel, goalCompletionReward, levelProgress, skillLevel } from '../lib/game'
-import { fromTreePosition, toTreePosition, treeHeroWidth, treeNodeWidth } from '../lib/treeLayout'
+import { descendantIds, fromTreePosition, toTreePosition, treeHeroWidth, treeNodeWidth } from '../lib/treeLayout'
 import { useStore } from '../lib/store'
 import type { Skill, SkillDraft, SkillGoal, SkillGoalDraft } from '../lib/types'
 
@@ -19,6 +19,12 @@ export function TreePage({ initialSelectedId = null }: { initialSelectedId?: str
   const [newParentId, setNewParentId] = useState('')
   const [flow, setFlow] = useState<ReactFlowInstance | null>(null)
   const focusHero = useRef(false)
+  const skillsById = useMemo(() => new Map(state.skills.map((skill) => [skill.id, skill])), [state.skills])
+  const activeGoalsBySkill = useMemo(() => {
+    const goals = new Map<string, SkillGoal>()
+    for (const goal of state.goals) if (goal.status !== 'completed' && !goals.has(goal.skillId)) goals.set(goal.skillId, goal)
+    return goals
+  }, [state.goals])
   const rootSkills = state.skills.filter((skill) => !skill.parentId)
   const heroX = rootSkills.length ? rootSkills.reduce((sum, skill) => sum + toTreePosition(skill.position).x + treeNodeWidth / 2, 0) / rootSkills.length - treeHeroWidth / 2 : -treeHeroWidth / 2
   const heroY = rootSkills.length ? Math.min(...rootSkills.map((skill) => toTreePosition(skill.position).y)) - 300 : -130
@@ -33,14 +39,7 @@ export function TreePage({ initialSelectedId = null }: { initialSelectedId?: str
 
   const visibleSkills = useMemo(() => {
     if (!branchId) return state.skills
-    const ids = new Set([branchId])
-    let changed = true
-    while (changed) {
-      changed = false
-      state.skills.forEach((skill) => {
-        if (skill.parentId && ids.has(skill.parentId) && !ids.has(skill.id)) { ids.add(skill.id); changed = true }
-      })
-    }
+    const ids = descendantIds(state.skills, branchId)
     return state.skills.filter((skill) => ids.has(skill.id))
   }, [branchId, state.skills])
 
@@ -52,10 +51,10 @@ export function TreePage({ initialSelectedId = null }: { initialSelectedId?: str
     }
     const skillNodes = visibleSkills.map((skill) => {
       const progress = skillLevel(skill)
-      const parent = state.skills.find((item) => item.id === skill.parentId)
+      const parent = skill.parentId ? skillsById.get(skill.parentId) : undefined
       const locked = parent ? skillLevel(parent).level < skill.requiredParentLevel : false
       const color = skill.color
-      const goal = activeGoalForSkill(state.goals, skill.id)
+      const goal = activeGoalsBySkill.get(skill.id) ?? null
       return {
         id: skill.id,
         position: toTreePosition(skill.position),
@@ -65,17 +64,20 @@ export function TreePage({ initialSelectedId = null }: { initialSelectedId?: str
       } satisfies Node
     })
     return branchId ? skillNodes : [rootNode, ...skillNodes]
-  }, [branchId, heroX, heroY, state.goals, state.profile.avatar, state.profile.name, state.profile.totalXp, state.skills, visibleSkills])
+  }, [branchId, heroX, heroY, activeGoalsBySkill, state.profile.avatar, state.profile.name, state.profile.totalXp, skillsById, visibleSkills])
 
   const [nodes, setNodes] = useState<Node[]>(calculatedNodes)
   useEffect(() => setNodes(calculatedNodes), [calculatedNodes])
 
-  const edges = useMemo<Edge[]>(() => visibleSkills.map((skill) => {
-    const parentId = skill.parentId && visibleSkills.some((item) => item.id === skill.parentId) ? skill.parentId : (branchId ? null : 'player-root')
-    if (!parentId) return null
-    const color = skill.color
-    return { id: `${parentId}-${skill.id}`, source: parentId, target: skill.id, animated: skill.xp > 0, style: { stroke: color, strokeWidth: 2, opacity: 0.6 } }
-  }).filter(Boolean) as Edge[], [branchId, state.skills, visibleSkills])
+  const edges = useMemo<Edge[]>(() => {
+    const visibleIds = new Set(visibleSkills.map((skill) => skill.id))
+    return visibleSkills.map<Edge | null>((skill) => {
+      const parentId = skill.parentId && visibleIds.has(skill.parentId) ? skill.parentId : (branchId ? null : 'player-root')
+      if (!parentId) return null
+      const color = skill.color
+      return { id: `${parentId}-${skill.id}`, source: parentId, target: skill.id, animated: skill.xp > 0, style: { stroke: color, strokeWidth: 2, opacity: 0.6 } }
+    }).filter((edge): edge is Edge => edge !== null)
+  }, [branchId, visibleSkills])
 
   const selected = state.skills.find((skill) => skill.id === selectedId) ?? null
   const selectedGoal = selected ? activeGoalForSkill(state.goals, selected.id) : null
@@ -104,7 +106,7 @@ export function TreePage({ initialSelectedId = null }: { initialSelectedId?: str
       <ReactFlow nodes={nodes} edges={edges} onInit={setFlow} onNodesChange={(changes: NodeChange[]) => setNodes((items) => applyNodeChanges(changes, items))} onNodeDragStop={(_event, node) => node.id !== 'player-root' && moveSkill(node.id, fromTreePosition(node.position))} onNodeClick={(_event, node) => node.id !== 'player-root' && setSelectedId(node.id)} fitView fitViewOptions={{ padding: .1, minZoom: .8, maxZoom: 1 }} minZoom={0.25} maxZoom={1.6} colorMode="dark" proOptions={{ hideAttribution: true }}>
         <Background color="var(--tree-dot)" gap={26} size={1} />
         <Controls showInteractive={false} fitViewOptions={{ padding: .12, minZoom: .25, maxZoom: 1 }} />
-        {!selected && <MiniMap position="top-right" pannable zoomable nodeColor={(node) => state.skills.find((skill) => skill.id === node.id)?.color ?? '#dfe2ec'} maskColor="var(--tree-minimap-mask)" />}
+        {!selected && <MiniMap position="top-right" pannable zoomable nodeColor={(node) => skillsById.get(node.id)?.color ?? '#dfe2ec'} maskColor="var(--tree-minimap-mask)" />}
       </ReactFlow>
       <div className="tree-hint"><Sparkles size={15} /> Колесо — масштаб · перетаскивание — перемещение карты</div>
       {selected && <SkillDetails
@@ -122,7 +124,7 @@ export function TreePage({ initialSelectedId = null }: { initialSelectedId?: str
         onCompleteGoal={() => selectedGoal && window.confirm(`Отметить цель «${selectedGoal.title}» достигнутой и получить награду?`) && completeGoal(selectedGoal.id)}
         onDeleteGoal={() => selectedGoal && window.confirm(`Удалить главную цель «${selectedGoal.title}»?`) && deleteGoal(selectedGoal.id)}
         onDelete={() => {
-          if (window.confirm(`Удалить навык «${selected.name}»? Дочерние навыки станут самостоятельными ветками.`)) { deleteSkill(selected.id); setSelectedId(null) }
+          if (window.confirm(`Удалить навык «${selected.name}»? Дочерние навыки станут самостоятельными ветками.`)) { deleteSkill(selected.id); setSelectedId(null); if (branchId === selected.id) setBranchId(null) }
         }}
       />}
     </section>

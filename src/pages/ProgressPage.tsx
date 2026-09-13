@@ -1,33 +1,48 @@
 import { Activity, CheckCircle2, Flame, Sparkles, TrendingUp, Zap } from 'lucide-react'
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
+import { useMemo } from 'react'
 import { SkillIcon } from '../components/SkillIcon'
 import { PageHeader, ProgressBar } from '../components/Ui'
 import { calculateStreak, dateKey, levelProgress, skillLevel } from '../lib/game'
 import { useStore } from '../lib/store'
 
+const chartDateFormat = new Intl.DateTimeFormat('ru-RU', { day: '2-digit', month: '2-digit' })
+const historyDateFormat = new Intl.DateTimeFormat('ru-RU', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' })
+
 export function ProgressPage() {
-  const { state } = useStore()
+  const { state, today } = useStore()
   const profile = levelProgress(state.profile.totalXp)
-  const questHistory = state.history.filter((event) => event.type === 'quest')
-  const today = dateKey()
-  const todayXp = questHistory.filter((event) => event.date === today).reduce((sum, event) => sum + event.xp, 0)
-  const chartData = Array.from({ length: 14 }, (_, index) => {
-    const date = new Date()
+  const activity = useMemo(() => {
+    const days = new Map<string, { xp: number; count: number }>()
+    let count = 0
+    for (const event of state.history) {
+      if (event.type !== 'quest') continue
+      count++
+      const day = days.get(event.date) ?? { xp: 0, count: 0 }
+      day.xp += event.xp
+      day.count++
+      days.set(event.date, day)
+    }
+    return { days, count }
+  }, [state.history])
+  const todayXp = activity.days.get(today)?.xp ?? 0
+  const chartData = useMemo(() => Array.from({ length: 14 }, (_, index) => {
+    const date = new Date(`${today}T12:00:00`)
     date.setDate(date.getDate() - (13 - index))
     const key = dateKey(date)
     return {
-      date: new Intl.DateTimeFormat('ru-RU', { day: '2-digit', month: '2-digit' }).format(date),
-      xp: questHistory.filter((event) => event.date === key).reduce((sum, event) => sum + event.xp, 0),
+      date: chartDateFormat.format(date),
+      xp: activity.days.get(key)?.xp ?? 0,
     }
-  })
-  const rankedSkills = [...state.skills].sort((a, b) => b.xp - a.xp)
+  }), [activity, today])
+  const rankedSkills = useMemo(() => [...state.skills].sort((a, b) => b.xp - a.xp), [state.skills])
 
   return <div className="page">
     <PageHeader eyebrow="Хроника героя" title="Прогресс" description="Опыт показывает не намерения, а уже выполненные реальные действия." />
     <section className="stats-grid">
       <StatCard icon={<Zap />} label="Общий опыт" value={`${state.profile.totalXp} XP`} hint={`Уровень ${profile.level}`} tone="violet" />
-      <StatCard icon={<Activity />} label="Сегодня" value={`+${todayXp} XP`} hint={`${questHistory.filter((event) => event.date === today).length} выполнено`} tone="blue" />
-      <StatCard icon={<CheckCircle2 />} label="Всего квестов" value={String(questHistory.length)} hint="завершено" tone="green" />
+      <StatCard icon={<Activity />} label="Сегодня" value={`+${todayXp} XP`} hint={`${activity.days.get(today)?.count ?? 0} выполнено`} tone="blue" />
+      <StatCard icon={<CheckCircle2 />} label="Всего квестов" value={String(activity.count)} hint="завершено" tone="green" />
       <StatCard icon={<Flame />} label="Текущая серия" value={`${calculateStreak(state.profile.activeDays)} дн.`} hint="без штрафов" tone="orange" />
     </section>
     <section className="progress-layout">
@@ -56,7 +71,7 @@ export function ProgressPage() {
     </section>
     <section className="panel history-panel">
       <div className="panel-title"><span>Последние события</span><small>Локальная история</small></div>
-      {state.history.length === 0 ? <div className="history-empty">Выполните первый квест — здесь появится запись о прогрессе.</div> : <div className="history-list">{[...state.history].reverse().slice(0, 12).map((event) => <div key={event.id}><span className={`history-icon history-icon--${event.type}`}>{event.type === 'quest' ? '✓' : event.type === 'goal' ? '♛' : '★'}</span><div><strong>{event.title}</strong><small>{event.type === 'goal' ? 'Достигнута главная цель · ' : ''}{new Intl.DateTimeFormat('ru-RU', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' }).format(new Date(event.createdAt))}</small></div><em>{event.xp > 0 ? `+${event.xp} XP` : `${event.gold} золота`}</em></div>)}</div>}
+      {state.history.length === 0 ? <div className="history-empty">Выполните первый квест — здесь появится запись о прогрессе.</div> : <div className="history-list">{state.history.slice(-12).reverse().map((event) => <div key={event.id}><span className={`history-icon history-icon--${event.type}`}>{event.type === 'quest' ? '✓' : event.type === 'goal' ? '♛' : '★'}</span><div><strong>{event.title}</strong><small>{event.type === 'goal' ? 'Достигнута главная цель · ' : ''}{historyDateFormat.format(new Date(event.createdAt))}</small></div><em>{event.xp > 0 ? `+${event.xp} XP` : `${event.gold > 0 ? '+' : ''}${event.gold} золота`}</em></div>)}</div>}
     </section>
   </div>
 }
