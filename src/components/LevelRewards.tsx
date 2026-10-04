@@ -1,6 +1,6 @@
-import { Coins, Gift, Pencil, Plus, Trophy, Trash2 } from 'lucide-react'
+import { Gift, PawPrint, Pencil, Plus, Sparkles, Trophy, Trash2 } from 'lucide-react'
 import { useState, type FormEvent } from 'react'
-import { levelGold, levelGoldBetween } from '../lib/levelRewards'
+import { characterMilestonesForGender } from '../lib/character'
 import { useStore } from '../lib/store'
 import type { PersonalLevelReward } from '../lib/types'
 import { Modal } from './Ui'
@@ -11,13 +11,13 @@ export function LevelUpModal() {
   if (highestLevel <= acknowledgedLevel) return null
   const unlocked = personal.filter((reward) => reward.level > acknowledgedLevel && reward.level <= highestLevel)
   const badges = Math.floor(highestLevel / 5) - Math.floor(acknowledgedLevel / 5)
+  const newLooks = characterMilestonesForGender(state.profile.character?.gender ?? 'boy').filter((item) => item.level > acknowledgedLevel && item.level <= highestLevel)
   return <Modal title={`Новый уровень: ${highestLevel}!`} subtitle="Ваши действия превращаются в прогресс" onClose={acknowledgeLevelRewards}>
     <div className="level-up" data-testid="level-up">
       <div className="level-up__medal"><Trophy size={36} /><strong>{highestLevel}</strong></div>
-      <p className="level-up__gold"><Coins size={22} /> +{levelGoldBetween(acknowledgedLevel, highestLevel)} золота</p>
-      <p>Золото уже в кошельке. Награда за каждый достигнутый уровень выдаётся один раз.</p>
       {badges > 0 && <p>Новых памятных значков: {badges}. Они сохранены в профиле.</p>}
-      {unlocked.length > 0 && <div className="level-unlocked"><strong>Открылись личные награды</strong>{unlocked.map((reward) => <span key={reward.id}><Gift size={15} /> {reward.title}</span>)}<small>Заберите их бесплатно во вкладке «Награды».</small></div>}
+      {newLooks.length > 0 && <div className="level-unlocked"><strong>Новые образы и этапы</strong>{newLooks.map((item) => <span key={`${item.level}-${item.title}`}>{item.kind === 'pet' ? <PawPrint size={15} /> : <Sparkles size={15} />} {item.level} уровень · {item.title}</span>)}<small>Они доступны во вкладке «Прогресс».</small></div>}
+      {unlocked.length > 0 && <div className="level-unlocked"><strong>Открылись личные поощрения</strong>{unlocked.map((reward) => <span key={reward.id}><Gift size={15} /> {reward.title}</span>)}<small>Заберите их в разделе развития во вкладке «Прогресс».</small></div>}
       <button className="button button--primary" onClick={acknowledgeLevelRewards}>Продолжить приключение</button>
     </div>
   </Modal>
@@ -30,8 +30,8 @@ export function LevelRewardsPanel() {
   const nextMilestone = (Math.floor(highestLevel / 5) + 1) * 5
   const sorted = [...personal].sort((a, b) => a.level - b.level)
   return <section className="level-rewards-section">
-    <div className="rewards-heading"><div><span className="eyebrow">Новые вершины</span><h2>Награды за уровни</h2></div><button className="button button--secondary" onClick={() => setEditing('new')}><Plus size={16} /> Личная награда</button></div>
-    <div className="panel level-rewards-rules"><Trophy size={25} /><div><strong>Каждый уровень — 10 золота</strong><p>На уровнях 5, 10, 15… — ещё 25 золота и памятный значок. Личная награда открывается бесплатно на выбранном уровне.</p></div><span>Следующий уровень<br /><b>+{levelGold(highestLevel + 1)} золота</b></span></div>
+    <div className="rewards-heading"><div><span className="eyebrow">Новые вершины</span><h2>Личные цели по уровням</h2></div><button className="button button--secondary" onClick={() => setEditing('new')}><Plus size={16} /> Личная цель</button></div>
+    <div className="panel level-rewards-rules"><Trophy size={25} /><div><strong>Новые уровни — новые возможности</strong><p>На уровнях 5, 10, 15… открывается памятный значок. Запланированное личное поощрение доступно бесплатно на выбранном уровне.</p></div><span>Следующая веха<br /><b>Уровень {nextMilestone}</b></span></div>
     {sorted.length === 0 ? <div className="panel level-rewards-empty"><Gift size={24} /><strong>Выберите подарок будущему себе</strong><p>Например, книга за 5 уровень или поездка за 10. Назначьте награду заранее и заберите её после достижения.</p></div>
       : <div className="rewards-grid">{sorted.map((reward) => {
         const unlocked = reward.level <= highestLevel
@@ -65,12 +65,12 @@ function PersonalRewardModal({ reward, minLevel, defaultLevel, onClose, onSave }
     event.preventDefault()
     if (title.trim() && Number.isSafeInteger(level) && level >= minLevel) onSave(title.trim(), level)
   }
-  return <Modal title={reward ? 'Изменить личную награду' : 'Награда за будущий уровень'} subtitle="Выберите то, чему будете рады" onClose={onClose}>
+  return <Modal title={reward ? 'Изменить личное поощрение' : 'Поощрение за будущий уровень'} subtitle="Выберите то, чему будете рады" onClose={onClose}>
     <form className="form" onSubmit={submit}>
       <label className="field field--full"><span>Подарок себе</span><input autoFocus required maxLength={120} value={title} onChange={(event) => setTitle(event.target.value)} placeholder="Например: купить книгу" /></label>
       <label className="field field--full"><span>Уровень персонажа</span><input required type="number" min={minLevel} step={1} value={level} onChange={(event) => setLevel(Number(event.target.value))} /></label>
-      <p className="field--full">Награду можно изменить до достижения уровня. После открытия она останется доступной, даже если вы отмените выполненный квест.</p>
-      <footer className="form-actions field--full"><button type="button" className="button button--ghost" onClick={onClose}>Отмена</button><button className="button button--primary" type="submit">Сохранить награду</button></footer>
+      <p className="field--full">Поощрение можно изменить до достижения уровня. После открытия оно останется доступным, даже если вы отмените выполненный квест.</p>
+      <footer className="form-actions field--full"><button type="button" className="button button--ghost" onClick={onClose}>Отмена</button><button className="button button--primary" type="submit">Сохранить</button></footer>
     </form>
   </Modal>
 }

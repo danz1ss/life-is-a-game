@@ -1,15 +1,17 @@
 import { createContext, useCallback, useContext, useEffect, useLayoutEffect, useMemo, useState, type ReactNode, type SetStateAction } from 'react'
-import { createInitialState, dateKey, difficultyConfig, goalCompletionReward, isQuestComplete, isQuestForDate, isQuestSkipped, migrateState, nextDateKey } from './game'
-import type { AppState, Profile, Quest, QuestDraft, Reward, RewardDraft, Skill, SkillDraft, SkillGoal, SkillGoalDraft } from './types'
+import { createInitialState, dateKey, difficultyConfig, goalCompletionReward, isQuestComplete, isQuestSkipped, migrateState } from './game'
+import type { AppState, DeletedWeeklyTask, Profile, Quest, QuestDraft, Reward, RewardDraft, Skill, SkillDraft, SkillGoal, SkillGoalDraft } from './types'
 import { removeQuest, restoreDeletedQuest } from './questDeletion'
 import { updateSkillColors } from './skillColors'
 import type { BackgroundTheme } from './appearance'
 import { nextSkillPosition } from './treeLayout'
 import { createStateSaver, type SaveStatus } from './stateSaver'
 import { toggleQuestCompletion, toggleQuestSkipped } from './questCompletion'
-import { assignMainQuest, patchPlannedQuest, reorderDayQuest } from './planning'
+import { assignMainQuest, patchPlannedQuest, reorderDayQuest, rescheduleOneTimeQuest } from './planning'
 import { awardNewLevels, claimLevelReward } from './levelRewards'
 import { useToday } from './useToday'
+import { closeQuestDay } from './dayReview'
+import { isWeekMonday, removeWeeklyTask, replaceWeeklyPlan, restoreWeeklyTask, reviewWeeklyPlan, toggleWeeklyTaskCompletion, upsertWeeklyTask, weeklyPlanError, weeklyTaskLimit } from './weeklyPlanning'
 
 interface StoreValue {
   state: AppState
@@ -19,6 +21,7 @@ interface StoreValue {
   dismissToast: () => void
   addQuest: (draft: QuestDraft, onDate?: string) => void
   updateQuest: (id: string, patch: Partial<Quest>, onDate?: string) => void
+  rescheduleQuest: (id: string, targetDate: string) => void
   deleteQuest: (id: string) => void
   deletedQuest: Quest | null
   undoDeleteQuest: () => void
@@ -30,6 +33,14 @@ interface StoreValue {
   closeDay: (onDate?: string) => void
   reorderQuest: (sourceId: string, targetId: string, placement: 'before' | 'after', onDate?: string) => void
   setMainQuest: (id: string, onDate?: string) => void
+  saveWeeklyTask: (week: string, title: string, id?: string) => void
+  deleteWeeklyTask: (week: string, id: string) => void
+  toggleWeeklyTask: (week: string, id: string) => void
+  planWeek: (week: string, titles: string[]) => void
+  reviewWeek: (week: string) => void
+  deletedWeeklyTask: DeletedWeeklyTask | null
+  undoDeleteWeeklyTask: () => void
+  dismissDeletedWeeklyTasks: () => void
   acknowledgeLevelRewards: () => void
   savePersonalLevelReward: (title: string, level: number, id?: string) => void
   deletePersonalLevelReward: (id: string) => void
@@ -46,6 +57,7 @@ interface StoreValue {
   updateReward: (id: string, patch: Partial<Reward>) => void
   deleteReward: (id: string) => void
   redeemReward: (id: string) => boolean
+  usePurchasedReward: (id: string) => void
   updateProfile: (patch: Partial<Profile>) => void
   setTodayMode: (mode: 'list' | 'timeline') => void
   setBackground: (theme: BackgroundTheme) => void
@@ -87,6 +99,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [saveStatus, setSaveStatus] = useState<SaveStatus>('loading')
   const [toast, setToast] = useState<string | null>(null)
   const [deletedQuests, setDeletedQuests] = useState<Quest[]>([])
+  const [deletedWeeklyTasks, setDeletedWeeklyTasks] = useState<DeletedWeeklyTask[]>([])
   const [loadError, setLoadError] = useState<string | null>(null)
   const [loadAttempt, setLoadAttempt] = useState(0)
   const [saver] = useState(() => createStateSaver(persistState, setSaveStatus))
@@ -159,6 +172,12 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       setState((current) => current && patchPlannedQuest(current, id, patch, onDate))
     }
 
+    const rescheduleQuest = (id: string, targetDate: string) => {
+      const reopensDay = Boolean(state.dayPlans[targetDate]?.closed)
+      setState((current) => current && rescheduleOneTimeQuest(current, id, targetDate))
+      setToast(reopensDay ? 'День снова открыт · задачи вернулись в план' : 'Квест запланирован на выбранный день')
+    }
+
     const deleteQuest = (id: string) => {
       const quest = state.quests.find((item) => item.id === id)
       if (!quest) return
@@ -201,7 +220,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       setState((current) => current && toggleQuestCompletion(current, id, onDate, eventId, createdAt))
       if (!isQuestComplete(quest, onDate)) {
         const reward = difficultyConfig[quest.difficulty]
-        setToast(`Выполнено · +${reward.xp} XP · +${reward.gold} золота`)
+        setToast(`Выполнено · +${reward.xp} XP · +${reward.gold} монет`)
       }
     }
 
@@ -213,29 +232,13 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     }
 
     const closeDay = (onDate = dateKey()) => {
-      const pending = state.quests.filter((quest) => isQuestForDate(quest, onDate)
-        && !isQuestComplete(quest, onDate)
-        && !isQuestSkipped(quest, onDate))
-      if (pending.length === 0) {
-        setToast('Все квесты дня уже разобраны')
+      const review = closeQuestDay(state, onDate)
+      setState((current) => current && closeQuestDay(current, onDate).state)
+      if (review.unresolved + review.skippedRepeats === 0) {
+        setToast('День закрыт · все квесты разобраны')
         return
       }
-
-      const ids = new Set(pending.map((quest) => quest.id))
-      const tomorrow = nextDateKey(onDate)
-      const rescheduled = pending.filter((quest) => quest.repeatDays.length === 0).length
-      const skipped = pending.length - rescheduled
-      setState((current) => current && ({
-        ...current,
-        quests: current.quests.map((quest) => ids.has(quest.id)
-          ? {
-            ...quest,
-            dueDate: quest.repeatDays.length > 0 ? quest.dueDate : tomorrow,
-            skippedDates: [...quest.skippedDates.filter((date) => date !== onDate), onDate],
-          }
-          : quest),
-      }))
-      setToast(`День закрыт · перенесено: ${rescheduled} · пропущено повторов: ${skipped}`)
+      setToast(`День закрыт · требуют решения: ${review.unresolved} · пропущено повторов: ${review.skippedRepeats}`)
     }
 
     const reorderQuest = (sourceId: string, targetId: string, placement: 'before' | 'after', onDate = dateKey()) => {
@@ -249,6 +252,48 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     const setMainQuest = (id: string, onDate = dateKey()) => {
       setState((current) => current && assignMainQuest(current, id, onDate))
       setToast('Главный квест дня выбран')
+    }
+
+    const saveWeeklyTask = (week: string, title: string, existingId?: string) => {
+      const id = existingId ?? uuid()
+      setState((current) => current && upsertWeeklyTask(current, week, id, title))
+    }
+
+    const deleteWeeklyTask = (week: string, id: string) => {
+      if (!isWeekMonday(week)) return
+      const tasks = state.weeklyPlans[week]?.tasks ?? []
+      const index = tasks.findIndex((task) => task.id === id)
+      if (index < 0) return
+      setDeletedWeeklyTasks((items) => [...items, { week, task: tasks[index], index }])
+      setState((current) => current && removeWeeklyTask(current, week, id))
+    }
+
+    const undoDeleteWeeklyTask = () => {
+      const deleted = deletedWeeklyTasks.at(-1)
+      if (!deleted) return
+      const plan = state.weeklyPlans[deleted.week]
+      if (plan && plan.tasks.length >= weeklyTaskLimit && !plan.tasks.some((task) => task.id === deleted.task.id)) {
+        setToast('В неделе уже 5 задач. Освободите место, чтобы вернуть удалённую.')
+        return
+      }
+      setState((current) => current && restoreWeeklyTask(current, deleted))
+      setDeletedWeeklyTasks((items) => items.slice(0, -1))
+    }
+
+    const toggleWeeklyTask = (week: string, id: string) => {
+      setState((current) => current && toggleWeeklyTaskCompletion(current, week, id))
+    }
+
+    const planWeek = (week: string, titles: string[]) => {
+      if (!isWeekMonday(week) || weeklyPlanError(titles.map((title) => title.trim()))) return
+      const tasks = titles.map((title) => ({ id: uuid(), title, done: false }))
+      setState((current) => current && replaceWeeklyPlan(current, week, tasks))
+      setToast('Главные задачи недели сохранены')
+    }
+
+    const reviewWeek = (week: string) => {
+      const reviewedAt = new Date().toISOString()
+      setState((current) => current && reviewWeeklyPlan(current, week, reviewedAt))
     }
 
     const addSkill = (draft: SkillDraft) => {
@@ -349,7 +394,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           }],
         }
       })
-      setToast(`Цель достигнута · +${goalCompletionReward.xp} XP · +${goalCompletionReward.gold} золота`)
+      setToast(`Цель достигнута · +${goalCompletionReward.xp} XP · +${goalCompletionReward.gold} монет`)
     }
 
     const addReward = (draft: RewardDraft) => {
@@ -380,14 +425,21 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         return {
           ...current,
           profile: { ...current.profile, gold: current.profile.gold - currentReward.cost },
+          purchasedRewards: currentReward.useImmediately ? current.purchasedRewards : [...current.purchasedRewards, {
+            id: uuid(), rewardId: currentReward.id, title: currentReward.title, icon: currentReward.icon, purchasedAt: new Date().toISOString(),
+          }],
           history: [...current.history, {
             id: uuid(), type: 'reward', date: dateKey(), createdAt: new Date().toISOString(), title: currentReward.title,
             rewardId: currentReward.id, xp: 0, gold: -currentReward.cost,
           }],
         }
       })
-      setToast(`Награда получена: ${reward.title}`)
+      setToast(reward.useImmediately ? `Награда использована: ${reward.title}` : `Награда куплена: ${reward.title}`)
       return true
+    }
+
+    const usePurchasedReward = (id: string) => {
+      setState((current) => current && ({ ...current, purchasedRewards: current.purchasedRewards.filter((item) => item.id !== id) }))
     }
 
     const updateProfile = (patch: Partial<Profile>) => {
@@ -423,6 +475,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       if (result.canceled || !result.state) return false
       setStoredState(migrateState(result.state))
       setDeletedQuests([])
+      setDeletedWeeklyTasks([])
       setToast('Резервная копия восстановлена')
       return true
     }
@@ -445,13 +498,15 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         personal: current.levelRewards.personal.filter((reward) => reward.id !== id || reward.level <= current.levelRewards.highestLevel) } })),
       claimPersonalLevelReward: (id) => setState((current) => current && claimLevelReward(current, id, dateKey(), new Date().toISOString())),
       deletedQuest: deletedQuests.at(-1) ?? null, undoDeleteQuest, dismissDeletedQuests: () => setDeletedQuests([]),
-      addQuest, updateQuest, deleteQuest, archiveQuest, restoreQuest, toggleQuest, skipQuest, closeDay, reorderQuest, setMainQuest,
+      addQuest, updateQuest, rescheduleQuest, deleteQuest, archiveQuest, restoreQuest, toggleQuest, skipQuest, closeDay, reorderQuest, setMainQuest,
+      saveWeeklyTask, deleteWeeklyTask, toggleWeeklyTask, planWeek, reviewWeek,
+      deletedWeeklyTask: deletedWeeklyTasks.at(-1) ?? null, undoDeleteWeeklyTask, dismissDeletedWeeklyTasks: () => setDeletedWeeklyTasks([]),
       addSkill, updateSkill, deleteSkill, moveSkill,
       addGoal, updateGoal, deleteGoal, completeGoal,
-      addReward, updateReward, deleteReward, redeemReward,
+      addReward, updateReward, deleteReward, redeemReward, usePurchasedReward,
       updateProfile, setTodayMode, setBackground, exportBackup, importBackup,
     }
-  }, [state, today, saveStatus, toast, deletedQuests, dismissToast, setState])
+  }, [state, today, saveStatus, toast, deletedQuests, deletedWeeklyTasks, dismissToast, setState])
 
   if (loadError) return <div className="app-loading" role="alert"><p>Не удалось загрузить данные. Сохранение не изменено.</p><p>{loadError}</p><button className="button button--primary" onClick={() => setLoadAttempt((attempt) => attempt + 1)}>Повторить загрузку</button></div>
   if (!value) return <div className="app-loading"><div className="loading-rune">✦</div><p>Загружаем приключение…</p></div>

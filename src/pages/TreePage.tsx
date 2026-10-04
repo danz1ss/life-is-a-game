@@ -1,6 +1,7 @@
 import { Background, Controls, MiniMap, ReactFlow, applyNodeChanges, type Edge, type Node, type NodeChange, type ReactFlowInstance } from '@xyflow/react'
-import { CalendarDays, ChevronRight, LockKeyhole, Pause, Pencil, Play, Plus, Sparkles, Swords, Target, Trash2, Trophy, X } from 'lucide-react'
+import { CalendarDays, ChevronRight, LockKeyhole, Pause, Pencil, Play, Plus, Sparkles, Target, Trash2, Trophy, X } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { CharacterPortrait } from '../components/CharacterPortrait'
 import { GoalModal } from '../components/GoalModal'
 import { SkillModal } from '../components/SkillModal'
 import { SkillIcon } from '../components/SkillIcon'
@@ -46,7 +47,7 @@ export function TreePage({ initialSelectedId = null }: { initialSelectedId?: str
   const calculatedNodes = useMemo<Node[]>(() => {
     const rootNode: Node = {
       id: 'player-root', position: { x: heroX, y: heroY }, draggable: false,
-      data: { label: <div className="tree-root-node"><span>{['⚔', '⚔️'].includes(state.profile.avatar) ? <Swords size={40} /> : state.profile.avatar}</span><strong>{state.profile.name}</strong><small>Главный герой · Уровень {levelProgress(state.profile.totalXp).level}</small></div> },
+      data: { label: <div className="tree-root-node"><span>{!state.profile.character && !['⚔', '⚔️'].includes(state.profile.avatar) ? state.profile.avatar : <CharacterPortrait appearance={state.profile.character} level={Math.max(state.levelRewards.highestLevel, levelProgress(state.profile.totalXp).level)} variant="bust" />}</span><strong>{state.profile.name}</strong><small>Главный герой · Уровень {levelProgress(state.profile.totalXp).level}</small></div> },
       style: { width: treeHeroWidth, padding: 0, background: 'transparent', border: 0 },
     }
     const skillNodes = visibleSkills.map((skill) => {
@@ -64,7 +65,7 @@ export function TreePage({ initialSelectedId = null }: { initialSelectedId?: str
       } satisfies Node
     })
     return branchId ? skillNodes : [rootNode, ...skillNodes]
-  }, [branchId, heroX, heroY, activeGoalsBySkill, state.profile.avatar, state.profile.name, state.profile.totalXp, skillsById, visibleSkills])
+  }, [branchId, heroX, heroY, activeGoalsBySkill, state.profile.avatar, state.profile.character, state.profile.name, state.profile.totalXp, skillsById, visibleSkills])
 
   const [nodes, setNodes] = useState<Node[]>(calculatedNodes)
   useEffect(() => setNodes(calculatedNodes), [calculatedNodes])
@@ -179,7 +180,7 @@ function SkillDetails({ skill, skills, goal, completedGoals, questCount, onClose
       <ProgressBar value={goal.progress} color={skill.color} />
       {goal.targetDate && <div className="goal-deadline"><CalendarDays size={13} /> До {dateLabel(goal.targetDate)}</div>}
       <div className="goal-card-actions"><button className="button button--ghost" onClick={onToggleGoalStatus}>{goal.status === 'paused' ? <Play size={14} /> : <Pause size={14} />}{goal.status === 'paused' ? 'Продолжить' : 'Пауза'}</button><button className="button button--success" onClick={onCompleteGoal}><Trophy size={14} /> Цель достигнута</button><button className="icon-button icon-button--danger" onClick={onDeleteGoal}><Trash2 size={15} /></button></div>
-      <small className="goal-reward-small">Награда: +{goalCompletionReward.xp} XP · +{goalCompletionReward.gold} золота</small>
+      <small className="goal-reward-small">За цель: +{goalCompletionReward.xp} XP · +{goalCompletionReward.gold} монет</small>
     </section> : <button className="add-goal-card" onClick={onAddGoal}><span><Target size={20} /></span><strong>Добавить главную цель</strong><small>Зафиксируйте, к чему и зачем вы развиваете этот навык.</small></button>}
 
     {completedGoals.length > 0 && <div className="completed-goals"><Trophy size={14} /><span><strong>Достигнуто целей: {completedGoals.length}</strong><small>{completedGoals.at(-1)?.title}</small></span></div>}

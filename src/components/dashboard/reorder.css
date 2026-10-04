@@ -1,0 +1,23 @@
+.dashboard-page .g-reorder-list { position: relative; }
+.dashboard-page .g-reorder-list > .g-quest { position: relative; }
+.dashboard-page .g-list.g-reorder-list .quest-card { padding-left: 43px; }
+.dashboard-page .g-quest-handle { position: absolute; z-index: 2; left: 7px; top: calc(var(--space-2) + 1px); display: grid; place-items: center; width: 28px; height: 32px; padding: 0; border: 0; border-radius: var(--radius-sm); background: transparent; color: var(--text-secondary); cursor: grab; }
+.dashboard-page .g-quest-handle { touch-action: none; }
+.dashboard-page .g-quest-handle:hover { color: var(--accent-bright); background: var(--surface-hover); }
+.dashboard-page .g-quest-handle:active { cursor: grabbing; }
+body.g-is-reordering, body.g-is-reordering .dashboard-page * { cursor: grabbing !important; user-select: none; }
+.dashboard-page .g-reorder-list > .is-dragging { z-index: 30; }
+.dashboard-page .g-reorder-list > .is-dragging .quest-card { transform: translateY(var(--drag-y)) scale(1.01); border-color: var(--accent-bright); box-shadow: 0 12px 28px #0007; transition: none; pointer-events: none; }
+.dashboard-page .g-reorder-list > .is-dragging .g-quest-handle { transform: translateY(var(--drag-y)); }
+.dashboard-page .g-reorder-list .g-insertion-line { position: absolute; z-index: 40; left: 0; right: 0; height: 3px; border-radius: 2px; background: var(--accent-bright); pointer-events: none; list-style: none; }
+.dashboard-page .g-insertion-line::before, .g-insertion-line::after { content: ''; position: absolute; top: -3px; width: 9px; height: 9px; border-radius: 50%; background: var(--accent-bright); }
+.dashboard-page .g-insertion-line::before { left: -3px; }
+.dashboard-page .g-insertion-line::after { right: -3px; }
+.dashboard-page .g-insertion-line > span { position: absolute; right: 12px; bottom: 4px; padding: 3px 7px; color: var(--bg); background: var(--accent-bright); border-radius: 4px; font-size: 11px; font-weight: 600; }
+@media (max-width: 640px) {
+  .dashboard-page .g-list.g-reorder-list .quest-card { padding-left: 38px; }
+  .dashboard-page .g-quest-handle { left: 3px; top: calc(var(--space-2) - 1px); height: 40px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .dashboard-page .g-reorder-list > .is-dragging .quest-card { transform: translateY(var(--drag-y)); }
+}

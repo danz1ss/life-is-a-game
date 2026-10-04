@@ -77,6 +77,7 @@ export function isQuestForDate(quest: Quest, value: string) {
   if (quest.skippedDates.includes(value)) return true
   const date = new Date(`${value}T12:00:00`)
   if (quest.repeatDays.length > 0) return (!quest.dueDate || quest.dueDate <= value) && quest.repeatDays.includes(date.getDay())
+  if (quest.completedDates.length > 0) return quest.completedDates.includes(value)
   if (quest.dueDate) return quest.dueDate === value
   return false
 }
@@ -89,11 +90,11 @@ export function isQuestSkipped(quest: Quest, value: string) {
   return quest.skippedDates.includes(value)
 }
 
-export function isQuestOverdue(quest: Quest, today = dateKey()) {
+export function isQuestOverdue(quest: Quest, today = dateKey(), plannedDayClosed = false) {
   return !quest.archivedAt
     && quest.repeatDays.length === 0
     && quest.completedDates.length === 0
-    && Boolean(quest.dueDate && quest.dueDate < today)
+    && Boolean(quest.dueDate && (quest.dueDate < today || (quest.dueDate === today && plannedDayClosed)))
 }
 
 export function activeGoalForSkill(goals: SkillGoal[], skillId: string) {
@@ -123,7 +124,7 @@ export function createInitialState(): AppState {
   const today = dateKey()
   const now = new Date().toISOString()
   return {
-    version: 5,
+    version: 6,
     profile: {
       name: 'Игрок',
       avatar: '⚔️',
@@ -152,8 +153,10 @@ export function createInitialState(): AppState {
       { id: 'reward-film', title: 'Посмотреть фильм', description: 'Выбрать фильм из своего списка', icon: '🎬', cost: 20, createdAt: now },
       { id: 'reward-treat', title: 'Любимое угощение', description: '', icon: '☕', cost: 15, createdAt: now },
     ],
+    purchasedRewards: [],
     history: [],
     dayPlans: { [today]: { mainQuestId: 'quest-project', questOrder: [] } },
+    weeklyPlans: {},
     levelRewards: { highestLevel: 1, acknowledgedLevel: 1, personal: [] },
     preferences: { todayMode: 'list', background: 'minimalism' },
   }
@@ -169,14 +172,20 @@ export function migrateState(value: unknown): AppState {
   if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error('Некорректный файл сохранения')
   const stored = value as StoredState
   if (!Array.isArray(stored.skills) || !Array.isArray(stored.quests)) throw new Error('В сохранении отсутствуют навыки или квесты')
-  if (stored.version !== undefined && (!Number.isInteger(stored.version) || stored.version < 1 || stored.version > 5)) {
+  if (stored.version !== undefined && (!Number.isInteger(stored.version) || stored.version < 1 || stored.version > 6)) {
     throw new Error('Неподдерживаемая версия сохранения')
   }
-  if (stored.version === 5 && (!stored.dayPlans || !stored.levelRewards)) throw new Error('В сохранении отсутствуют планы дней или награды за уровни')
+  if ((stored.version ?? 1) >= 5 && (!stored.dayPlans || !stored.levelRewards)) throw new Error('В сохранении отсутствуют планы дней или награды за уровни')
 
   const migrated = {
-    version: 5,
-    profile: stored.profile,
+    version: 6,
+    profile: stored.profile?.character ? {
+      ...stored.profile,
+      character: {
+        ...stored.profile.character,
+        gender: stored.profile.character.gender === undefined ? 'boy' : stored.profile.character.gender,
+      },
+    } : stored.profile,
     skills: stored.skills,
     quests: stored.quests.map((quest, index) => {
       if (!quest || typeof quest !== 'object') throw new Error('Некорректный квест в сохранении')
@@ -189,9 +198,11 @@ export function migrateState(value: unknown): AppState {
     }),
     goals: stored.goals ?? [],
     rewards: stored.rewards,
+    purchasedRewards: stored.purchasedRewards ?? [],
     history: stored.history,
     dayPlans: stored.dayPlans ?? Object.fromEntries(stored.quests.filter((quest) => quest?.isMain && !quest.archivedAt)
       .map((quest) => [quest.repeatDays?.length ? dateKey() : quest.dueDate ?? dateKey(), { mainQuestId: quest.id, questOrder: [] }])),
+    weeklyPlans: stored.version === 6 ? stored.weeklyPlans : {},
     levelRewards: stored.levelRewards ?? {
       highestLevel: levelProgress(stored.profile?.totalXp ?? 0).level,
       acknowledgedLevel: levelProgress(stored.profile?.totalXp ?? 0).level,

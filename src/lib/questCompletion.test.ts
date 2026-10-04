@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { createInitialState } from './game'
+import { createInitialState, isQuestForDate } from './game'
 import { toggleQuestCompletion, toggleQuestSkipped } from './questCompletion'
 
 const date = '2026-09-12'
@@ -74,5 +74,19 @@ describe('quest awards', () => {
     expect(completed.quests[0].skippedDates).toEqual([])
     completed.profile.gold = 0
     expect(toggle(completed).profile.gold).toBe(0)
+  })
+
+  it('records a late completion on the chosen day while preserving the planned day', () => {
+    const state = createInitialState()
+    state.quests[0].dueDate = '2026-09-12'
+    state.quests[0].skippedDates = ['2026-09-12']
+    const completed = toggle(state, '2026-09-13')
+    expect(completed.quests[0].dueDate).toBe('2026-09-12')
+    expect(completed.quests[0].completedDates).toEqual(['2026-09-13'])
+    expect(completed.quests[0].skippedDates).toEqual([])
+    expect(completed.history[0].date).toBe('2026-09-13')
+    expect(completed.profile.activeDays).toEqual(['2026-09-13'])
+    expect(isQuestForDate(completed.quests[0], '2026-09-12')).toBe(false)
+    expect(isQuestForDate(completed.quests[0], '2026-09-13')).toBe(true)
   })
 })

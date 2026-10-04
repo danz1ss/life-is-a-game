@@ -1,4 +1,5 @@
 import type { AppState } from './types'
+import { isWeekMonday, isWeeklyPlan } from './weeklyPlanning'
 
 type Check = (value: unknown) => boolean
 const record = (value: unknown): value is Record<string, unknown> => value !== null && typeof value === 'object' && !Array.isArray(value)
@@ -29,7 +30,19 @@ const entities = (fields: Record<string, Check>): Check => (value) => {
 // Validate migrated data before rendering it or replacing a user's saved profile.
 export function assertValidState(value: unknown): asserts value is AppState {
   const sections: Record<string, Check> = {
-    profile: object({ name: string, avatar: string, totalXp: nonnegative, gold: nonnegative, activeDays: array(date) }),
+    version: oneOf(6),
+    profile: object({
+      name: string, avatar: string, totalXp: nonnegative, gold: nonnegative, activeDays: array(date),
+      character: optional(object({
+        gender: oneOf('boy', 'girl'),
+        skin: oneOf('light', 'medium', 'dark'), hair: oneOf('short', 'long', 'hood', 'wind', 'crown'),
+        outfit: oneOf('casual', 'traveler', 'guardian', 'mage', 'ranger', 'champion', 'celestial'),
+        weapon: oneOf('none', 'sword', 'shield', 'staff', 'bow', 'twin', 'crystal'),
+        accent: oneOf('azure', 'violet', 'amber', 'emerald', 'rose', 'gold'),
+        pet: optional(oneOf('fox', 'owl', 'dragon')),
+      })),
+      petName: optional(string),
+    }),
     skills: entities({
       name: string, description: string, icon: string, color: string, parentId: nullable(id), xp: nonnegative,
       position: object({ x: number, y: number }), requiredParentLevel: positive, createdAt: timestamp,
@@ -45,12 +58,14 @@ export function assertValidState(value: unknown): asserts value is AppState {
       progress: (value) => nonnegative(value) && (value as number) <= 100,
       status: oneOf('active', 'paused', 'completed'), createdAt: timestamp, completedAt: nullable(timestamp),
     }),
-    rewards: entities({ title: string, description: string, icon: string, cost: nonnegative, createdAt: timestamp }),
+    rewards: entities({ title: string, description: string, icon: string, cost: nonnegative, useImmediately: optional(oneOf(true, false)), createdAt: timestamp }),
+    purchasedRewards: entities({ rewardId: id, title: string, icon: string, purchasedAt: timestamp }),
     history: entities({
       type: oneOf('quest', 'reward', 'goal', 'level', 'level-reward'), date, createdAt: timestamp, title: string,
       questId: optional(id), rewardId: optional(id), goalId: optional(id), skillId: optional(nullable(id)), xp: nonnegative, gold: number,
     }),
-    dayPlans: (value) => record(value) && Object.entries(value).every(([key, plan]) => date(key) && object({ mainQuestId: nullable(id), questOrder: array(id) })(plan)),
+    dayPlans: (value) => record(value) && Object.entries(value).every(([key, plan]) => date(key) && object({ mainQuestId: nullable(id), questOrder: array(id), closed: optional(oneOf(true, false)) })(plan)),
+    weeklyPlans: (value) => record(value) && Object.entries(value).every(([key, plan]) => isWeekMonday(key) && isWeeklyPlan(plan)),
     levelRewards: (value) => object({
       highestLevel: level, acknowledgedLevel: level,
       personal: entities({ title: id, level, claimedAt: nullable(timestamp) }),

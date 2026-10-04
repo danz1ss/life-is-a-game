@@ -5,7 +5,7 @@ import type { DragEvent, ReactNode } from 'react'
 import { difficultyConfig, formatDuration, isQuestComplete, isQuestSkipped } from '../lib/game'
 import type { Quest, Skill } from '../lib/types'
 
-export function QuestCard({ quest, skill, goalTitle, date, onToggle, onSkip, onEdit, onDelete, onMakeMain, onReorder, compact = false, showResultActions = true, badge, footer }: {
+export function QuestCard({ quest, skill, goalTitle, date, onToggle, onSkip, onEdit, onDelete, onMakeMain, onReorder, compact = false, showResultActions = true, showScheduledTime = true, badge, footer }: {
   quest: Quest
   skill?: Skill
   goalTitle?: string
@@ -18,6 +18,7 @@ export function QuestCard({ quest, skill, goalTitle, date, onToggle, onSkip, onE
   onReorder?: (sourceId: string, targetId: string, placement: 'before' | 'after') => void
   compact?: boolean
   showResultActions?: boolean
+  showScheduledTime?: boolean
   badge?: { label: string; tone: 'danger' | 'muted' | 'success' | 'violet' }
   footer?: ReactNode
 }) {
@@ -55,7 +56,7 @@ export function QuestCard({ quest, skill, goalTitle, date, onToggle, onSkip, onE
         {quest.description && <p className={compact ? 'quest-description--compact' : ''}>{quest.description}</p>}
         <div className="quest-meta">
           {badge && <span className={`quest-status quest-status--${badge.tone}`}>{badge.label}</span>}
-          {quest.scheduledTime && <span><Clock3 size={13} /> {quest.scheduledTime}</span>}
+          {showScheduledTime && quest.scheduledTime && <span><Clock3 size={13} /> {quest.scheduledTime}</span>}
           <span><Clock3 size={13} /> {formatDuration(quest.durationMinutes)}</span>
           {skill && <span className="skill-pill" data-skill-id={skill.id} style={{ color: skill.color }}><SkillIcon icon={skill.icon} size={14} />{skill.name}</span>}
           {goalTitle && <span className="goal-pill"><Target size={12} />{goalTitle}</span>}

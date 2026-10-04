@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { createInitialState, isQuestComplete, isQuestForDate, isQuestOverdue, isQuestSkipped, levelProgress, migrateState, nextDateKey } from './game'
+import { defaultCharacter } from './character'
 import type { Quest } from './types'
 
 function makeQuest(patch: Partial<Quest> = {}): Quest {
@@ -34,7 +35,7 @@ describe('миграция локальных данных', () => {
     (state: Record<string, unknown>) => { state.quests = [null] },
     (state: Record<string, unknown>) => { state.history = 'invalid' },
     (state: Record<string, unknown>) => { state.goals = 'invalid' },
-    (state: Record<string, unknown>) => { state.version = 6 },
+    (state: Record<string, unknown>) => { state.version = 7 },
   ])('rejects malformed sections and unsupported versions', (corrupt) => {
     const state = structuredClone(createInitialState()) as unknown as Record<string, unknown>
     corrupt(state)
@@ -53,6 +54,36 @@ describe('миграция локальных данных', () => {
     expect(() => migrateState({ ...state, levelRewards: undefined })).toThrow()
   })
 
+  it('keeps a customized character in a backup and accepts older profiles without one', () => {
+    const state = createInitialState()
+    const customized = { ...state, profile: { ...state.profile, character: { ...defaultCharacter, gender: 'girl' as const, weapon: 'shield' as const, pet: 'owl' as const }, petName: 'Искра' } }
+    expect(migrateState(JSON.parse(JSON.stringify(customized))).profile.character).toEqual(customized.profile.character)
+    expect(migrateState(JSON.parse(JSON.stringify(customized))).profile.petName).toBe('Искра')
+    expect(migrateState(state).profile.character).toBeUndefined()
+    expect(() => migrateState({ ...customized, profile: { ...customized.profile, character: { ...defaultCharacter, weapon: 'laser' } } })).toThrow()
+    expect(() => migrateState({ ...customized, profile: { ...customized.profile, character: { ...defaultCharacter, pet: 'robot' } } })).toThrow()
+    expect(() => migrateState({ ...customized, profile: { ...customized.profile, character: { ...defaultCharacter, gender: 'robot' } } })).toThrow()
+  })
+
+  it('adds a default gender to older characters without changing their chosen gear', () => {
+    const state = createInitialState()
+    const oldCharacter = { skin: 'dark', hair: 'hood', outfit: 'champion', weapon: 'sword', accent: 'rose', pet: 'owl' }
+    const imported = { ...state, profile: { ...state.profile, name: 'Alex', character: oldCharacter, petName: 'Spark', gold: 77 } }
+    const restored = migrateState(JSON.parse(JSON.stringify(imported)))
+    expect(restored.profile).toEqual({ ...imported.profile, character: { ...oldCharacter, gender: 'boy' } })
+    expect((imported.profile.character as typeof oldCharacter & { gender?: string }).gender).toBeUndefined()
+  })
+
+  it('keeps purchased rewards in backups and upgrades older saves without inventory', () => {
+    const state = createInitialState()
+    const purchase = { id: 'purchase-1', rewardId: state.rewards[0].id, title: 'Свободный вечер', icon: '🌙', purchasedAt: new Date().toISOString() }
+    expect(migrateState({ ...state, purchasedRewards: [purchase] }).purchasedRewards).toEqual([purchase])
+    const legacy = structuredClone(state) as unknown as Record<string, unknown>
+    delete legacy.purchasedRewards
+    expect(migrateState(legacy).purchasedRewards).toEqual([])
+    expect(() => migrateState({ ...state, purchasedRewards: [{ ...purchase, purchasedAt: 'invalid' }] })).toThrow()
+  })
+
   it('добавляет цели и поля архива к состоянию MVP v1', () => {
     const legacy = structuredClone(createInitialState()) as unknown as Record<string, unknown>
     legacy.version = 1
@@ -66,7 +97,7 @@ describe('миграция локальных данных', () => {
 
     const migrated = migrateState(legacy)
 
-    expect(migrated.version).toBe(5)
+    expect(migrated.version).toBe(6)
     expect(migrated.goals).toEqual([])
     expect(migrated.quests.every((quest) => quest.archivedAt === null)).toBe(true)
     expect(migrated.quests.every((quest) => quest.skippedDates.length === 0)).toBe(true)

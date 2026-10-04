@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
-import { createInitialState, migrateState, nextDateKey } from './game'
-import { assignMainQuest, patchPlannedQuest, questsForDay, reorderDayQuest, upcomingQuests } from './planning'
+import { createInitialState, isQuestOverdue, isQuestSkipped, migrateState, nextDateKey } from './game'
+import { closeQuestDay } from './dayReview'
+import { assignMainQuest, patchPlannedQuest, questsForDay, reorderDayQuest, rescheduleOneTimeQuest, upcomingQuests } from './planning'
 
 const today = '2026-09-12'
 const tomorrow = nextDateKey(today)
@@ -47,6 +48,21 @@ describe('tomorrow planning', () => {
     const state = patchPlannedQuest(fixture(), 'idea', { dueDate: tomorrow }, today)
     expect(questsForDay(state, tomorrow).some((quest) => quest.id === 'idea')).toBe(true)
     expect(upcomingQuests(state.quests, tomorrow).some((quest) => quest.id === 'idea')).toBe(false)
+  })
+
+  it('reopens a closed today plan when an unresolved quest is moved onto today', () => {
+    const state = fixture()
+    state.quests = [{ ...state.quests[0], skippedDates: [today] }]
+    const closed = closeQuestDay(state, today).state
+    const pending = closed.quests[0]
+    expect(isQuestOverdue(pending, today, closed.dayPlans[today].closed)).toBe(true)
+
+    const moved = rescheduleOneTimeQuest(closed, pending.id, today)
+    expect(moved.quests[0].dueDate).toBe(today)
+    expect(moved.dayPlans[today].closed).toBe(false)
+    expect(isQuestSkipped(moved.quests[0], today)).toBe(false)
+    expect(isQuestOverdue(moved.quests[0], today, moved.dayPlans[today].closed)).toBe(false)
+    expect(questsForDay(moved, today).map((quest) => quest.id)).toEqual([pending.id])
   })
 
   it('moves a selected main quest to its new date without clearing today', () => {

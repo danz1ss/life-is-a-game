@@ -71,7 +71,7 @@ export function QuestModal({ quest, skills, initialIsMain = false, initialDate, 
               const config = difficultyConfig[value]
               return (
                 <button className={`difficulty-option difficulty-option--${config.tone} ${difficulty === value ? 'is-selected' : ''}`} type="button" key={value} onClick={() => setDifficulty(value)}>
-                  <strong>{config.label}</strong><span>+{config.xp} XP · {config.gold} золота</span>
+                  <strong>{config.label}</strong><span>+{config.xp} XP · {config.gold} монет</span>
                 </button>
               )
             })}

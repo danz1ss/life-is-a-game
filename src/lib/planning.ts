@@ -43,3 +43,19 @@ export function patchPlannedQuest(state: AppState, id: string, patch: Partial<Qu
   if (patch.isMain === false && next.dayPlans[contextDate]?.mainQuestId === id) next = assignMainQuest(next, null, contextDate)
   return next
 }
+
+export function rescheduleOneTimeQuest(state: AppState, id: string, targetDate: string): AppState {
+  const quest = state.quests.find((item) => item.id === id)
+  if (!quest || quest.archivedAt || quest.repeatDays.length > 0 || quest.completedDates.length > 0) return state
+
+  const next = patchPlannedQuest(state, id, {
+    dueDate: targetDate,
+    skippedDates: quest.skippedDates.filter((date) => date !== targetDate),
+  }, targetDate)
+  const targetPlan = next.dayPlans[targetDate]
+  if (!targetPlan?.closed) return next
+  return {
+    ...next,
+    dayPlans: { ...next.dayPlans, [targetDate]: { ...targetPlan, closed: false } },
+  }
+}

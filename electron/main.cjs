@@ -109,6 +109,7 @@ function createWindow() {
     minWidth: 1040,
     minHeight: 700,
     backgroundColor: '#17191f',
+    icon: path.join(__dirname, '..', app.isPackaged ? 'dist' : 'public', 'hero-icon.png'),
     title: profileTitle ? `Life is a Game — ${profileTitle}` : 'Life is a Game',
     autoHideMenuBar: true,
     webPreferences: {

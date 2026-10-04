@@ -19,7 +19,7 @@ describe('persistent skill colour families', () => {
   it('migrates inherited colours without changing progress, tasks or skill data', () => {
     const old = legacyState()
     const next = migrateState(old)
-    expect(next.version).toBe(5)
+    expect(next.version).toBe(6)
     expect({ ...next, skills: undefined, version: undefined }).toEqual({ ...old, skills: undefined, version: undefined })
     expect(next.skills.map(({ color: _, ...skill }) => skill)).toEqual(old.skills.map(({ color: _, ...skill }) => skill))
     expect(next.skills.find((skill) => skill.id === 'career')?.color).toBe('#eab354')

@@ -2,9 +2,21 @@ import type { BackgroundTheme } from './appearance'
 
 export type Difficulty = 'easy' | 'medium' | 'hard'
 
+export interface CharacterAppearance {
+  gender: 'boy' | 'girl'
+  skin: 'light' | 'medium' | 'dark'
+  hair: 'short' | 'long' | 'hood' | 'wind' | 'crown'
+  outfit: 'casual' | 'traveler' | 'guardian' | 'mage' | 'ranger' | 'champion' | 'celestial'
+  weapon: 'none' | 'sword' | 'shield' | 'staff' | 'bow' | 'twin' | 'crystal'
+  accent: 'azure' | 'violet' | 'amber' | 'emerald' | 'rose' | 'gold'
+  pet?: 'fox' | 'owl' | 'dragon'
+}
+
 export interface Profile {
   name: string
   avatar: string
+  character?: CharacterAppearance
+  petName?: string
   totalXp: number
   gold: number
   activeDays: string[]
@@ -63,7 +75,16 @@ export interface Reward {
   description: string
   icon: string
   cost: number
+  useImmediately?: boolean
   createdAt: string
+}
+
+export interface PurchasedReward {
+  id: string
+  rewardId: string
+  title: string
+  icon: string
+  purchasedAt: string
 }
 
 export interface HistoryEvent {
@@ -83,6 +104,24 @@ export interface HistoryEvent {
 export interface DayPlan {
   mainQuestId: string | null
   questOrder: string[]
+  closed?: boolean
+}
+
+export interface WeeklyTask {
+  id: string
+  title: string
+  done: boolean
+}
+
+export interface WeeklyPlan {
+  tasks: WeeklyTask[]
+  reviewedAt: string | null
+}
+
+export interface DeletedWeeklyTask {
+  week: string
+  task: WeeklyTask
+  index: number
 }
 
 export interface PersonalLevelReward {
@@ -93,14 +132,16 @@ export interface PersonalLevelReward {
 }
 
 export interface AppState {
-  version: 5
+  version: 6
   profile: Profile
   skills: Skill[]
   quests: Quest[]
   goals: SkillGoal[]
   rewards: Reward[]
+  purchasedRewards: PurchasedReward[]
   history: HistoryEvent[]
   dayPlans: Record<string, DayPlan>
+  weeklyPlans: Record<string, WeeklyPlan>
   levelRewards: {
     highestLevel: number
     acknowledgedLevel: number

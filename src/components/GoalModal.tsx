@@ -36,8 +36,8 @@ export function GoalModal({ goal, skill, onSave, onClose }: {
       <label className="field field--full"><span><Heart size={15} /> Зачем мне это</span><textarea value={purpose} onChange={(event) => setPurpose(event.target.value)} placeholder="Личный смысл цели — что изменится, когда вы её достигнете?" rows={3} /></label>
       <label className="field field--full"><span><Flag size={15} /> Как я пойму, что цель достигнута</span><textarea value={successCriteria} onChange={(event) => setSuccessCriteria(event.target.value)} placeholder="Например: поддерживать разговор 30 минут без перехода на русский" rows={2} /></label>
       <label className="field"><span><CalendarDays size={15} /> Целевая дата <small>необязательно</small></span><input type="date" value={targetDate} onChange={(event) => setTargetDate(event.target.value)} /></label>
-      <label className="field"><span>Текущий прогресс · {progress}%</span><input className="range-input" type="range" min={0} max={100} step={5} value={progress} onChange={(event) => setProgress(Number(event.target.value))} /></label>
-      <div className="goal-reward-note field--full"><Trophy size={18} /><span><strong>Награда за достижение</strong><small>+{goalCompletionReward.xp} XP навыка и персонажа · +{goalCompletionReward.gold} золота</small></span></div>
+      <label className="field"><span>Готовность большой цели · {progress}%</span><input className="range-input" type="range" min={0} max={100} step={5} value={progress} onChange={(event) => setProgress(Number(event.target.value))} /><small>Ваша оценка готовности цели</small></label>
+      <div className="goal-reward-note field--full"><Trophy size={18} /><span><strong>За достижение</strong><small>+{goalCompletionReward.xp} XP навыка и персонажа · +{goalCompletionReward.gold} монет</small></span></div>
       <footer className="form-actions field--full"><button className="button button--ghost" type="button" onClick={onClose}>Отмена</button><button className="button button--primary" type="submit">{goal ? 'Сохранить' : 'Поставить цель'}</button></footer>
     </form>
   </Modal>

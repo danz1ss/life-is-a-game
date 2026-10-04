@@ -1,0 +1,67 @@
+@font-face { font-family: 'Golos Text'; src: url('./assets/fonts/GolosText-Variable.ttf') format('truetype'); font-style: normal; font-weight: 400 900; font-display: swap; }
+:root { font-family: 'Golos Text', 'Segoe UI', sans-serif; }
+html, body, #root { min-width: 0; }
+.app-shell[data-ui='golden'] {
+  --rpg-xp: var(--accent); --rpg-quest-complete: var(--green); --rpg-reward: var(--gold);
+  --text-secondary: color-mix(in srgb, var(--accent) 22%, var(--text) 78%);
+  --text-muted: color-mix(in srgb, var(--accent) 38%, var(--text) 62%);
+  color: var(--text); font-family: 'Golos Text', 'Segoe UI', sans-serif;
+  scrollbar-color: var(--border-strong) var(--bg);
+}
+.app-shell[data-ui='golden'] ::selection { color: var(--bg); background: var(--accent-bright); }
+.app-shell[data-ui='golden'] input, .app-shell[data-ui='golden'] textarea { caret-color: var(--accent); }
+.app-shell[data-ui='golden'] button { touch-action: manipulation; }
+.app-shell[data-ui='golden'] .sidebar { width: 216px; flex-basis: 216px; padding: 28px 16px 20px; background: var(--sidebar); box-shadow: none; }
+.app-shell[data-ui='golden'] .brand { padding: 0; margin-bottom: 32px; gap: 10px; }
+.app-shell[data-ui='golden'] .brand-mark { width: 36px; height: 36px; flex-basis: 36px; border-radius: var(--radius-sm); box-shadow: none; border-color: var(--line); }
+.app-shell[data-ui='golden'] .brand strong { font-family: inherit; font-size: 17px; line-height: 1.3; }
+.app-shell[data-ui='golden'] .brand small { color: var(--text-muted); font-size: 12px; }
+.app-shell[data-ui='golden'] .main-nav { gap: 6px; }
+.app-shell[data-ui='golden'] .nav-item { min-width: 0; max-width: 100%; border-color: transparent; background: transparent; box-shadow: none; border-radius: var(--radius-sm); }
+.app-shell[data-ui='golden'] .nav-item:hover { background: var(--surface-hover); color: var(--text); }
+.app-shell[data-ui='golden'] .nav-item.is-active { background: var(--accent-soft); color: var(--accent-bright); }
+.app-shell[data-ui='golden'] .nav-item__icon { color: inherit; }
+.app-shell[data-ui='golden'] .sidebar-bottom { min-width: 0; width: 100%; padding-top: var(--space-6); }
+.app-shell[data-ui='golden'] .sidebar-actions { grid-template-columns: minmax(0, 1fr); min-width: 0; width: 100%; gap: var(--space-2); margin-bottom: var(--space-4); }
+.app-shell[data-ui='golden'] .sidebar-actions .nav-item { min-height: 48px; padding: var(--space-2) var(--space-3); gap: var(--space-2); }
+.app-shell[data-ui='golden'] .sidebar-actions .nav-item__label { white-space: normal; overflow-wrap: anywhere; line-height: 1.4; }
+.app-shell[data-ui='golden'] .offline-badge { background: transparent; border-color: var(--line-soft); }
+.app-shell[data-ui='golden'] .main-content { min-width: 0; }
+.app-shell[data-ui='golden'] .g-dashboard { position: relative; width: 100%; max-width: 1440px; margin: 0 auto; padding: 28px 24px 32px; min-width: 0; }
+.app-shell[data-ui='golden'] .button { min-height: 40px; box-shadow: none; }
+.app-shell[data-ui='golden'] .button--lg { min-height: 48px; padding: var(--space-3) var(--space-4); font-size: var(--font-secondary); }
+.app-shell[data-ui='golden'] .button:hover:not(:disabled) { transform: none; }
+.app-shell[data-ui='golden'] .button--ghost { border-color: var(--border); }
+.app-shell[data-ui='golden'] .button--tertiary { font-size: 13px; background: transparent; border-color: transparent; box-shadow: none; text-decoration-thickness: 1px; text-underline-offset: 4px; transition: color 160ms ease-out; }
+.app-shell[data-ui='golden'] .button--tertiary:hover:not(:disabled) { color: var(--g-button-hover, var(--accent-bright)); background: transparent; border-color: transparent; box-shadow: none; text-decoration-line: underline; }
+.app-shell[data-ui='golden'] .button--tertiary:active:not(:disabled) { color: var(--g-button-active, var(--accent)); background: transparent; transform: none; }
+.app-shell[data-ui='golden'] .button--tertiary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.app-shell[data-ui='golden'] .progress-fill { box-shadow: none; }
+.app-shell[data-ui='golden'] .progress-track { height: 6px; background: var(--surface-2); }
+@media (max-width: 1200px) { .app-shell[data-ui='golden'] .sidebar { width: 192px; flex-basis: 192px; } .app-shell[data-ui='golden'] .brand strong { font-size: 15px; } }
+@media (max-width: 960px) {
+  .app-shell[data-ui='golden'] { flex-direction: column; }
+  .app-shell[data-ui='golden'] .sidebar { flex: none; width: 100%; display: block; padding: 14px 24px; border-right: 0; border-bottom: 1px solid var(--line-soft); }
+  .app-shell[data-ui='golden'] .brand { margin-bottom: 12px; }
+  .app-shell[data-ui='golden'] .main-nav { flex-direction: row; }
+  .app-shell[data-ui='golden'] .main-nav .nav-item { flex: 1; justify-content: center; padding: 8px; font-size: 13px; }
+  .app-shell[data-ui='golden'] .nav-label { display: none; }
+  .app-shell[data-ui='golden'] .sidebar-bottom { display: flex; flex-direction: row; justify-content: space-between; align-items: center; gap: 12px; padding-top: 8px; margin-top: 0; }
+  .app-shell[data-ui='golden'] .sidebar-actions { display: flex; gap: var(--space-2); margin-bottom: 0; width: auto; }
+  .app-shell[data-ui='golden'] .sidebar-actions .nav-item { width: auto; min-height: 44px; padding: var(--space-2); }
+  .app-shell[data-ui='golden'] .sidebar-actions .nav-item__detail, .app-shell[data-ui='golden'] .offline-badge { display: none; }
+  .app-shell[data-ui='golden'] .save-state { margin: 0; font-size: 11px; }
+  .app-shell[data-ui='golden'] .g-dashboard { padding: 24px; }
+}
+@media (max-width: 640px) {
+  .app-shell[data-ui='golden'] .sidebar { padding: 12px 16px; }
+  .app-shell[data-ui='golden'] .brand small { display: none; }
+  .app-shell[data-ui='golden'] .main-nav { gap: 4px; }
+  .app-shell[data-ui='golden'] .main-nav .nav-item { flex-direction: column; gap: 6px; min-height: 56px; font-size: 11px; padding: 8px 4px; }
+  .app-shell[data-ui='golden'] .nav-item__balance { display: none; }
+  .app-shell[data-ui='golden'] .sidebar-actions .nav-item { font-size: 11px; gap: 5px; padding: 4px 0; }
+  .app-shell[data-ui='golden'] .sidebar-bottom { flex-wrap: wrap; }
+  .app-shell[data-ui='golden'] .sidebar-actions .nav-item__chevron { display: none; }
+  .app-shell[data-ui='golden'] .save-state { width: 100%; padding: 0; }
+  .app-shell[data-ui='golden'] .g-dashboard { padding: 16px; }
+}

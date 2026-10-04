@@ -46,9 +46,8 @@ export function toggleQuestCompletion(state: AppState, id: string, onDate: strin
     skills: state.skills.map((skill) => skill.id === quest.skillId ? { ...skill, xp: skill.xp + reward.xp } : skill),
     quests: state.quests.map((item) => item.id === id ? {
       ...item,
-      dueDate: item.repeatDays.length ? item.dueDate : onDate,
       completedDates: item.repeatDays.length ? [...item.completedDates, onDate] : [onDate],
-      skippedDates: item.skippedDates.filter((date) => date !== onDate),
+      skippedDates: item.repeatDays.length ? item.skippedDates.filter((date) => date !== onDate) : [],
     } : item),
     history,
   }

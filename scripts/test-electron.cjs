@@ -12,7 +12,7 @@ const invalidPayload = JSON.stringify({ version: 4, skills: [], quests: [], prof
 if (!process.versions.electron) {
   const { spawnSync } = require('node:child_process')
   const electron = require('electron')
-  for (const scenario of (process.env.LIFE_GAME_SMOKE_CASES?.split(',') ?? ['close', 'corrupt', 'null', 'import', 'retry', 'planning', 'levels'])) {
+  for (const scenario of (process.env.LIFE_GAME_SMOKE_CASES?.split(',') ?? ['close', 'corrupt', 'null', 'import', 'retry', 'planning', 'review', 'levels', 'weekly'])) {
     const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'life-game-smoke-'))
     try {
       if (scenario === 'corrupt' || scenario === 'null') {
@@ -32,13 +32,24 @@ if (!process.versions.electron) {
       if (scenario === 'corrupt' || scenario === 'null') assert.equal(row.payload, scenario === 'null' ? 'null' : invalidPayload, 'Failed loading must not overwrite the original save')
       else {
         const state = JSON.parse(row.payload)
-        const completed = scenario === 'close' || scenario === 'retry'
+        const completed = scenario === 'close' || scenario === 'retry' || scenario === 'review'
         assert.equal(state.profile.totalXp, scenario === 'levels' ? 650 : completed ? 50 : 0)
         assert.equal(state.history.length, scenario === 'levels' ? 3 : completed ? 1 : 0)
         if (scenario === 'levels') {
-          assert.equal(state.profile.gold, 45)
+          assert.equal(state.profile.gold, 10, 'Only the quest grants coins; reaching level five has no coin bonus')
+          assert.equal(state.history.find((event) => event.type === 'level').gold, 0)
           assert.equal(state.levelRewards.highestLevel, 5)
           assert.ok(state.levelRewards.personal[0].claimedAt)
+        }
+        if (scenario === 'weekly') {
+          const plans = Object.values(state.weeklyPlans)
+          assert.equal(state.profile.gold, 0, 'Weekly actions must not grant gold')
+          assert.equal(plans.length, 2, 'Current and following weekly plans must both persist')
+          assert.equal(plans.filter((plan) => Boolean(plan.reviewedAt)).length, 1)
+          assert.equal(plans[0].tasks.length, 3)
+          assert.equal(plans[0].tasks.filter((task) => task.done).length, 1)
+          assert.equal(plans[1].tasks.length, 3)
+          assert.equal(plans[1].tasks.filter((task) => task.done).length, 1)
         }
         assert.equal(state.skills.length, 8)
       }
@@ -52,6 +63,8 @@ if (!process.versions.electron) {
   }
 } else {
   const { app, dialog } = require('electron')
+  // The isolated smoke harness also runs on hosts without a usable native GPU.
+  app.disableHardwareAcceleration()
   const scenario = process.env.LIFE_GAME_SMOKE
   const timeout = setTimeout(() => { console.error('Electron smoke test timed out'); app.exit(1) }, 20_000)
   app.on('will-quit', () => clearTimeout(timeout))
@@ -87,19 +100,25 @@ if (!process.versions.electron) {
           // Longer than the save debounce: a failed load must not schedule any write.
           await new Promise((resolve) => setTimeout(resolve, 400))
         } else {
-          await waitFor("Boolean(document.querySelector('.main-quest button'))")
+          await waitFor("Boolean(document.querySelector('.g-quest.is-main .quest-check'))")
           await navigate(2, '.react-flow__node')
-          await navigate(3, '.chart-panel')
-          await navigate(4, '.data-actions')
+          await navigate(3, '.progress-summary')
+          await waitFor("Boolean(document.querySelector('.progress-shop__grid'))")
           if (scenario === 'planning' || scenario === 'levels') {
             await require('./test-planning.cjs')({ scenario, window, evaluate, waitFor, navigate, screenshot })
+          } else if (scenario === 'review') {
+            await require('./test-review.cjs')({ window, evaluate, waitFor, navigate, screenshot })
+          } else if (scenario === 'weekly') {
+            await require('./test-weekly.cjs')({ window, evaluate, waitFor, navigate, screenshot })
           } else if (scenario === 'import') {
-            await evaluate("window.confirm = () => true; document.querySelectorAll('.data-actions button')[1].click()")
-            await waitFor("Boolean(document.querySelector('.inline-toast'))")
-            assert.match(await evaluate("document.querySelector('.inline-toast').textContent"), /Некорректные данные/)
-            assert.equal(await evaluate("document.querySelector('.wallet strong').textContent"), '0')
+            await evaluate("window.confirm = () => true; [...document.querySelectorAll('.sidebar-actions .nav-item')].find((button) => button.textContent.includes('Данные приложения')).click()")
+            await waitFor("Boolean(document.querySelector('.data-modal'))")
+            await evaluate("document.querySelectorAll('.data-modal__actions button')[1].click()")
+            await waitFor("Boolean(document.querySelector('.data-modal__message'))")
+            assert.match(await evaluate("document.querySelector('.data-modal__message').textContent"), /Некорректные данные/)
+            assert.equal(await evaluate("document.querySelector('.progress-summary__wallet strong').textContent"), '0')
           } else {
-            await navigate(0, '.main-quest button')
+            await navigate(0, '.g-quest.is-main .quest-check')
             let lock
             if (scenario === 'retry') {
               await waitFor("Boolean(document.querySelector('.save-state--saved'))")
@@ -108,8 +127,8 @@ if (!process.versions.electron) {
             }
             // Close as soon as the UI commits, before the 250 ms auto-save timer.
             const start = Date.now()
-            await evaluate("document.querySelector('.main-quest button').click()")
-            await waitFor("Boolean(document.querySelector('.main-quest.is-complete'))")
+            await evaluate("document.querySelector('.g-quest.is-main .quest-check').click()")
+            await waitFor("Boolean(document.querySelector('.g-quest.is-main .quest-check[aria-pressed=true]'))")
             assert.ok(Date.now() - start < 250, 'Close test missed the debounce window')
             if (lock) {
               window.close()

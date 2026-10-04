@@ -1,0 +1,16 @@
+.character-stage {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+/* Small hero cards retain the same composition without separate pet offsets. */
+.hero-panel .avatar-orb:has(.character-stage) {
+  width: 72px;
+  height: 72px;
+  padding: 2px;
+}
+
+.hero-panel .avatar-orb .character-stage svg {
+  filter: none;
+}

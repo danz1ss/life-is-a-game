@@ -7,3 +7,5 @@ release/
 *.sqlite-shm
 *.sqlite-wal
 .local-test-profile/
+artifacts/
+tmp/
