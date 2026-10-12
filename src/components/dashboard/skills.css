@@ -1,0 +1,39 @@
+/* Every skill is visible; the overview has no cropped or internally scrolling list. */
+.g-skills {
+  min-width: 0;
+  padding: 20px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-lg);
+  color: var(--text);
+  background: var(--panel);
+  container-type: inline-size;
+}
+.g-skills-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 18px; }
+.g-skills-header h2 { display: flex; align-items: baseline; gap: 8px; margin: 0; font-size: 20px; font-weight: 600; line-height: 1.3; }
+.g-skills-tree { display: grid; place-items: center; flex: none; width: 40px; height: 40px; padding: 0; border: 0; border-radius: var(--radius-sm); color: var(--accent-bright); background: transparent; cursor: pointer; }
+.g-skills-tree:hover { background: var(--surface-hover); }
+.g-skills-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 24px; list-style: none; margin: 0; padding: 0; }
+.g-skills-list > li { position: relative; min-width: 0; border-top: 1px solid var(--line-soft); }
+.g-skills-list > li:nth-child(-n + 2) { border-top: 0; }
+.g-skill-overview { display: grid; align-content: start; width: 100%; height: 100%; min-width: 0; padding: 12px 14px 28px; gap: 8px; border: 0; border-radius: var(--radius-sm); background: transparent; color: var(--text); text-align: left; cursor: pointer; }
+.g-skill-overview:hover { background: color-mix(in srgb, var(--accent) 8%, var(--panel)); }
+.g-skills .g-skill-overview:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; background: var(--surface-hover); }
+.g-skill-name { display: flex; align-items: flex-start; gap: 8px; min-width: 0; }
+.g-skill-name strong { min-width: 0; font-size: 15px; font-weight: 600; line-height: 20px; overflow-wrap: anywhere; }
+.g-skill-icon { display: flex; flex: none; width: 20px; color: var(--g-skill-color); }
+.g-skill-meta { display: flex; align-items: baseline; justify-content: space-between; flex-wrap: wrap; gap: 2px 6px; color: var(--text-secondary); font-size: 13px; font-weight: 500; line-height: 18px; font-variant-numeric: tabular-nums; }
+.g-skill-meta > span { white-space: nowrap; }
+.g-skill-progress { position: absolute; left: 14px; right: 14px; bottom: 12px; display: block; min-width: 0; height: 4px; pointer-events: none; }
+.g-skills .g-skill-progress .progress-track { height: 4px; background: var(--surface-inset); }
+.g-skills-empty { margin: 8px 0 2px; color: var(--text-secondary); font-size: 14px; line-height: 1.5; }
+@container (width > 360px) and (width < 580px) {
+  .g-skills-list > li:last-child:nth-child(odd) { grid-column: 1 / -1; }
+}
+@container (min-width: 580px) {
+  .g-skills-list { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .g-skills-list > li:nth-child(-n + 3) { border-top: 0; }
+}
+@container (max-width: 360px) {
+  .g-skills-list { grid-template-columns: minmax(0, 1fr); }
+  .g-skills-list > li:nth-child(n + 2) { border-top: 1px solid var(--line-soft); }
+}

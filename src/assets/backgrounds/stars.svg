@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1000" viewBox="0 0 1600 1000">
+  <defs>
+    <radialGradient id="glow"><stop stop-color="#83d6ff" stop-opacity=".36"/><stop offset=".2" stop-color="#328cb7" stop-opacity=".13"/><stop offset="1" stop-color="#328cb7" stop-opacity="0"/></radialGradient>
+  </defs>
+  <g fill="url(#glow)"><circle cx="1390" cy="84" r="32"/><circle cx="1005" cy="125" r="22"/><circle cx="435" cy="782" r="18"/></g>
+  <g fill="#acd9f2" opacity=".5">
+    <circle cx="267" cy="48" r=".7"/><circle cx="342" cy="132" r=".8"/><circle cx="467" cy="35" r=".6"/>
+    <circle cx="571" cy="84" r=".9"/><circle cx="680" cy="24" r=".6"/><circle cx="756" cy="137" r=".7"/>
+    <circle cx="816" cy="54" r="1"/><circle cx="914" cy="95" r=".7"/><circle cx="1100" cy="32" r=".9"/>
+    <circle cx="1184" cy="108" r=".7"/><circle cx="1229" cy="46" r="1"/><circle cx="1293" cy="139" r=".65"/>
+    <circle cx="1353" cy="25" r=".7"/><circle cx="1447" cy="158" r=".75"/><circle cx="1510" cy="47" r=".8"/>
+    <circle cx="1562" cy="232" r=".9"/><circle cx="324" cy="302" r=".8"/><circle cx="791" cy="275" r=".7"/>
+    <circle cx="975" cy="404" r=".8"/><circle cx="1240" cy="358" r=".6"/><circle cx="1534" cy="473" r=".75"/>
+    <circle cx="262" cy="501" r=".7"/><circle cx="512" cy="443" r=".65"/><circle cx="714" cy="587" r=".8"/>
+    <circle cx="896" cy="521" r=".6"/><circle cx="1188" cy="661" r=".8"/><circle cx="1452" cy="734" r=".65"/>
+    <circle cx="296" cy="886" r=".6"/><circle cx="660" cy="827" r=".8"/><circle cx="995" cy="937" r=".7"/>
+    <circle cx="1260" cy="861" r=".7"/><circle cx="1529" cy="977" r=".9"/>
+  </g>
+  <g fill="#82b7db" opacity=".28">
+    <circle cx="383" cy="81" r=".6"/><circle cx="592" cy="167" r=".6"/><circle cx="697" cy="61" r=".55"/>
+    <circle cx="947" cy="28" r=".6"/><circle cx="1026" cy="73" r=".6"/><circle cx="1129" cy="186" r=".7"/>
+    <circle cx="1267" cy="92" r=".55"/><circle cx="1381" cy="193" r=".7"/><circle cx="1453" cy="39" r=".55"/>
+    <circle cx="374" cy="651" r=".7"/><circle cx="1148" cy="753" r=".6"/><circle cx="1581" cy="567" r=".6"/>
+  </g>
+  <g fill="#d5efff" opacity=".86"><circle cx="1390" cy="84" r="1.35"/><circle cx="1005" cy="125" r="1.1"/><circle cx="435" cy="782" r="1"/></g>
+</svg>

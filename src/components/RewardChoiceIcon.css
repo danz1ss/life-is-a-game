@@ -1,0 +1,53 @@
+.character-choice.reward-character-choice {
+  min-height: 49px;
+  gap: 9px;
+}
+
+.reward-choice-icon {
+  flex: 0 0 34px;
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  border: 1px solid #43657b;
+  border-radius: 8px;
+  background: radial-gradient(circle at 30% 20%, #365a70, #162b3d 75%);
+  box-shadow: inset 0 1px 0 #ffffff18;
+}
+
+.reward-choice-icon svg {
+  width: 31px;
+  height: 31px;
+  overflow: visible;
+  filter: drop-shadow(0 1px 1px #071827a6);
+}
+
+.reward-choice-icon--rare {
+  border-color: #7488c1;
+  background: radial-gradient(circle at 30% 20%, #4a568a, #1d2b47 75%);
+}
+
+.reward-choice-icon--epic {
+  border-color: #a69dd8;
+  background: radial-gradient(circle at 30% 20%, #655691, #262442 75%);
+}
+
+.reward-choice-icon--legendary {
+  border-color: #b8eaff;
+  background: radial-gradient(circle at 40% 30%, #217da4, #113358 65%, #122143);
+  box-shadow: 0 0 8px #41d4ff80, inset 0 0 5px #bdffff75;
+}
+
+.reward-character-choice:disabled .reward-choice-icon {
+  opacity: .78;
+}
+
+.reward-character-choice.is-selected .reward-choice-icon {
+  border-color: #d2f4ff;
+  box-shadow: 0 0 0 1px #97dcff99, inset 0 1px 0 #ffffff2c;
+}
+
+.reward-character-choice:focus-visible .reward-choice-icon {
+  outline: 2px solid #d8f7ff;
+  outline-offset: 2px;
+}
