@@ -58,6 +58,7 @@ html, body, #root { min-width: 0; }
   .app-shell[data-ui='golden'] .brand small { display: none; }
   .app-shell[data-ui='golden'] .main-nav { gap: 4px; }
   .app-shell[data-ui='golden'] .main-nav .nav-item { flex-direction: column; gap: 6px; min-height: 56px; font-size: 11px; padding: 8px 4px; }
+  .app-shell[data-ui='golden'] .main-nav .nav-item__label { min-width: 0; max-width: 100%; font-size: inherit; white-space: normal; text-align: center; }
   .app-shell[data-ui='golden'] .nav-item__balance { display: none; }
   .app-shell[data-ui='golden'] .sidebar-actions .nav-item { font-size: 11px; gap: 5px; padding: 4px 0; }
   .app-shell[data-ui='golden'] .sidebar-bottom { flex-wrap: wrap; }

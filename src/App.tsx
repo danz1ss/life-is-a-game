@@ -83,7 +83,7 @@ export function App() {
       {appearanceOpen && <AppearanceModal selected={state.preferences.background} onChange={setBackground} onClose={closeAppearance} />}
       {dataOpen && <DataModal onClose={() => setDataOpen(false)} />}
       <LevelUpModal />
-      {toast && <div className="game-toast" role="status"><span>✦</span><strong>{toast}</strong></div>}
+      {toast && state.levelRewards.highestLevel <= state.levelRewards.acknowledgedLevel && <div className="game-toast" role="status"><span>✦</span><strong>{toast}</strong></div>}
       {deletedQuest && <div className={`delete-toast ${toast ? 'delete-toast--raised' : ''}`}>
         <Trash2 size={18} />
         <div role="status"><strong>Квест удалён</strong><span title={deletedQuest.title}>{deletedQuest.title}</span><small>Заработанные XP и монеты сохранены</small></div>

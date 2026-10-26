@@ -21,6 +21,51 @@ function fixture() {
 }
 
 describe('tomorrow planning', () => {
+  it('sorts execution times first while retaining saved order for ties and untimed quests', () => {
+    const state = fixture()
+    const base = { ...state.quests[1], dueDate: today, repeatDays: [] }
+    state.quests = [
+      { ...base, id: 'untimed-a', scheduledTime: null, order: 0 },
+      { ...base, id: 'late', scheduledTime: '17:00', order: 1 },
+      { ...base, id: 'tie-a', scheduledTime: '09:00', order: 2 },
+      { ...base, id: 'midnight', scheduledTime: '00:00', order: 3 },
+      { ...base, id: 'tie-b', scheduledTime: '09:00', order: 4 },
+      { ...base, id: 'untimed-b', scheduledTime: null, order: 5 },
+    ]
+    state.dayPlans[today].questOrder = ['untimed-b', 'tie-b', 'late', 'tie-a', 'untimed-a', 'midnight']
+    const snapshot = JSON.stringify(state)
+    expect(questsForDay(state, today).map(q => q.id)).toEqual(['midnight', 'tie-b', 'tie-a', 'late', 'untimed-b', 'untimed-a'])
+    expect(JSON.stringify(state)).toBe(snapshot)
+  })
+
+  it('recalculates when execution time is assigned, edited and removed without mixing days', () => {
+    let state = fixture()
+    const ids = () => questsForDay(state, tomorrow).map(q => q.id)
+    state = patchPlannedQuest(state, 'daily', { scheduledTime: '12:30' }, tomorrow)
+    expect(ids()).toEqual(['daily', 'tomorrow'])
+    state = patchPlannedQuest(state, 'tomorrow', { scheduledTime: '09:00' }, tomorrow)
+    expect(ids()).toEqual(['tomorrow', 'daily'])
+    state = patchPlannedQuest(state, 'tomorrow', { scheduledTime: '17:00' }, tomorrow)
+    expect(ids()).toEqual(['daily', 'tomorrow'])
+    state = patchPlannedQuest(state, 'daily', { scheduledTime: null }, tomorrow)
+    expect(ids()).toEqual(['tomorrow', 'daily'])
+    expect(ids()).not.toContain('day-after')
+  })
+
+  it('sorts upcoming tasks by date then execution time, preserving ties and undated ideas', () => {
+    const state = fixture()
+    const base = { ...state.quests[1], repeatDays: [] }
+    const quests = [
+      { ...base, id: 'no-time', dueDate: '2026-09-14', scheduledTime: null, order: 0 },
+      { ...base, id: 'later-day', dueDate: '2026-09-15', scheduledTime: '00:00', order: 1 },
+      { ...base, id: 'tie-b', dueDate: '2026-09-14', scheduledTime: '09:00', order: 2 },
+      { ...base, id: 'tie-a', dueDate: '2026-09-14', scheduledTime: '09:00', order: 3 },
+      { ...base, id: 'idea-a', dueDate: null, scheduledTime: null, order: 4 },
+      { ...base, id: 'idea-b', dueDate: null, scheduledTime: null, order: 5 },
+    ]
+    expect(upcomingQuests(quests, tomorrow).map(q => q.id)).toEqual(['tie-b', 'tie-a', 'no-time', 'later-day', 'idea-a', 'idea-b'])
+  })
+
   it('includes tomorrow and its recurrences; sorts later dates before ideas', () => {
     const state = fixture()
     expect(questsForDay(state, tomorrow).map((quest) => quest.id)).toEqual(['tomorrow', 'daily'])

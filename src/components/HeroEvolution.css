@@ -1,0 +1,21 @@
+.hero-evolution { width: 100%; }
+.hero-evolution__scene { position: relative; height: clamp(220px, 35vh, 300px); overflow: hidden; border: 1px solid var(--border-strong, #394252); border-radius: 12px; background: radial-gradient(ellipse at 50% 76%, #5ddcff14, transparent 65%), var(--surface-2, #242a35); }
+.hero-evolution__ground { position: absolute; width: 60%; height: 1px; bottom: 7%; left: 20%; background: linear-gradient(90deg, transparent, #77c8e953, transparent); }
+.hero-evolution__layer { position: absolute; inset: 8px 24px; }
+.hero-evolution__after { opacity: 0; }
+.hero-evolution__scene[data-phase='playing'] .hero-evolution__before { animation: evolution-out 440ms ease-in-out both; }
+.hero-evolution__scene[data-phase='playing'] .hero-evolution__after { animation: evolution-in 440ms ease-in-out both; }
+.hero-evolution__scene[data-phase='complete'] .hero-evolution__before { opacity: 0; }
+.hero-evolution__scene[data-phase='complete'] .hero-evolution__after { opacity: 1; }
+.hero-evolution__caption { padding: 16px 0 0; text-align: center; }
+.hero-evolution__caption > span { display: block; color: var(--text-secondary, #b6c0ce); font-size: 13px; }
+.hero-evolution__caption > strong { display: block; margin-top: 5px; color: var(--text-primary, #f6f8fa); font-size: 24px; font-weight: 650; line-height: 1.25; }
+.hero-evolution__caption p { margin: 6px 0 0; color: var(--text-secondary, #b6c0ce); font-size: 14px; line-height: 1.5; }
+.level-up--evolution { gap: 16px; padding-top: 8px; }
+.level-up--evolution .level-unlocked { width: 100%; text-align: left; }
+@keyframes evolution-out { from { opacity: 1; } to { opacity: 0; } }
+@keyframes evolution-in { from { opacity: 0; } to { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) {
+  .hero-evolution__scene[data-phase='playing'] .hero-evolution__before { animation: none !important; opacity: 0; }
+  .hero-evolution__scene[data-phase='playing'] .hero-evolution__after { animation: none !important; opacity: 1; }
+}

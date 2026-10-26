@@ -15,6 +15,6 @@ export function HeroSummary({ totalXp, highestLevel, gold, gender, onRewards }: 
       <ProgressBar value={level.percent} color="var(--rpg-xp)" label="Опыт до следующего уровня" />
       <p className="g-level-distance">До уровня {level.level + 1} — {level.needed - level.current} XP</p>
     </div>
-    <button type="button" className="g-wallet" aria-label={`Баланс: ${gold} монет. Открыть награды`} onClick={onRewards}><Coins size={17} aria-hidden="true" /><strong>{gold}</strong><span>монет</span></button>
+    <button type="button" className={`g-wallet${String(gold).length > 5 ? ' g-wallet--large' : ''}`} aria-label={`Баланс: ${gold} монет. Открыть награды`} onClick={onRewards}><Coins size={17} aria-hidden="true" /><strong>{gold}</strong><span>монет</span></button>
   </section>
 }

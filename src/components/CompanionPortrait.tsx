@@ -1,20 +1,15 @@
 import { useId } from 'react'
 import { petStageForLevel, petStages } from '../lib/character'
 import type { CharacterAppearance } from '../lib/types'
+import { companionArtFile } from '../lib/characterVisual'
 
 type Species = NonNullable<CharacterAppearance['pet']>
-
-const companionArt: Record<Species, readonly string[]> = {
-  fox: ['fox-cub.png', 'fox-explorer.png', 'fox-explorer.png', 'fox-guardian.png', 'fox-guardian.png', 'fox-guardian.png'],
-  owl: ['owl-chick.png', 'owl-chick.png', 'owl-chick.png', 'owl-guardian.png', 'owl-guardian.png', 'owl-guardian.png'],
-  dragon: Array(6).fill('dragon-legend.png'),
-}
 
 export function CompanionPortrait({ species = 'fox', level = 1, className = '', x, y, size }: { species?: Species; level?: number; className?: string; x?: number; y?: number; size?: number }) {
   const id = useId().replace(/[^a-zA-Z0-9_-]/g, '')
   const stage = petStages.findIndex((item) => item.level === petStageForLevel(level).level)
   const color = species === 'owl' ? '#b99bff' : species === 'dragon' ? '#70eeff' : '#74daff'
-  const art = `${import.meta.env.BASE_URL}companions/${companionArt[species][stage]}`
+  const art = `${import.meta.env.BASE_URL}${companionArtFile(species, level)}`
 
   return <svg className={`companion-portrait ${className}`} x={x} y={y} width={size} height={size} viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
     <defs>

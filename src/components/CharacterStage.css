@@ -4,6 +4,10 @@
   height: 100%;
 }
 
+/* Shared surface for the dashboard and progress scenes. Portraits use the
+   same coordinate system, with their feet over the middle of this ellipse. */
+.character-podium { position: absolute; left: 1%; right: 1%; bottom: 1.5%; height: 11%; border-radius: 50%; background: radial-gradient(ellipse at 48% 32%, #506b82, #344e65 65%, #293f54); box-shadow: 0 6px 0 #21364a, 0 14px 20px #030b1855, inset 0 2px 8px #d4efff12; }
+
 /* Small hero cards retain the same composition without separate pet offsets. */
 .hero-panel .avatar-orb:has(.character-stage) {
   width: 72px;

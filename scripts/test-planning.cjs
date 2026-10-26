@@ -20,6 +20,7 @@ module.exports = async ({ scenario, window, evaluate, waitFor, navigate, screens
       state.profile.totalXp = 600;
       state.levelRewards.highestLevel = 4;
       state.levelRewards.acknowledgedLevel = 4;
+      state.profile.character = { gender: 'boy', skin: 'medium', hair: 'short', outfit: 'mage', weapon: 'none', accent: 'azure', pet: 'fox' };
     } else {
       const today = state.quests[0].dueDate;
       const later = (days) => { const d = new Date(today + 'T12:00:00'); d.setDate(d.getDate() + days); return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0'); };
@@ -82,13 +83,22 @@ module.exports = async ({ scenario, window, evaluate, waitFor, navigate, screens
     await screenshot('character-editor')
     await evaluate("document.querySelector('.progress-hero__actions button').click()")
     await waitFor("Boolean(document.querySelector('.appearance-editor'))")
-    await evaluate("[...document.querySelectorAll('.appearance-editor__tabs button')].find(button => button.textContent === 'Одежда').click()")
-    assert.equal(await evaluate("[...document.querySelectorAll('.appearance-editor__choice')].some(button => button.textContent.includes('Мантия мага') && button.disabled)"), true)
-    await evaluate("[...document.querySelectorAll('.appearance-editor__tabs button')].find(button => button.textContent === 'Оружие').click()")
-    await evaluate("[...document.querySelectorAll('.appearance-editor__choice')].find(button => button.textContent.includes('Щит')).click()")
-    await waitFor("[...document.querySelectorAll('.appearance-editor__choice')].find(button => button.textContent.includes('Щит')).classList.contains('is-selected')")
+    await evaluate("document.querySelector('.appearance-editor__identity').open=true")
+    await fill('.appearance-editor__identity input', 'Legacy outfit test')
+    await evaluate("document.querySelector('.appearance-editor__footer .button--primary').click()")
+    await waitFor("window.lifeGame.loadState().then(state => state.profile.name === 'Legacy outfit test')")
+    assert.equal(await evaluate("window.lifeGame.loadState().then(state => state.profile.character.outfit)"), 'mage', 'Editing unrelated fields must preserve legacy outfit')
+    assert.equal(await evaluate("window.lifeGame.loadState().then(state => state.profile.character.weapon)"), 'none')
+    await evaluate("document.querySelector('.progress-hero__actions button').click()")
+    await waitFor("Boolean(document.querySelector('.appearance-editor'))")
+    await evaluate("[...document.querySelectorAll('.appearance-editor__tabs button')].find(button => button.textContent === 'Комплект').click()")
+    await waitFor("Boolean(document.querySelector('[data-equipment-id=guardian]'))")
+    assert.equal(await evaluate("document.querySelector('[data-equipment-id=mage]').disabled"), true)
+    await evaluate("document.querySelector('[data-equipment-id=guardian]').click()")
+    await waitFor("document.querySelector('.appearance-editor__preview').innerHTML.includes('boy-child-guardian-shield.png')")
     await evaluate("document.querySelector('.appearance-editor__footer .button--primary').click()")
     await waitFor("window.lifeGame.loadState().then(state => state.profile.character?.weapon === 'shield')")
+    assert.equal(await evaluate("window.lifeGame.loadState().then(state => state.profile.character.outfit)"), 'guardian', 'Explicitly choosing a set updates the clothing and held weapon together')
     await evaluate("document.querySelectorAll('.progress-hero__actions button')[1].click()")
     await waitFor("Boolean(document.querySelector('.level-rewards-section'))")
     await evaluate("document.querySelector('.level-rewards-section .rewards-heading button').click()")

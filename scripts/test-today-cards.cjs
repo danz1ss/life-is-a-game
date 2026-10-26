@@ -107,6 +107,17 @@ module.exports = async ({ window, evaluate, waitFor, navigate }) => {
   await click('.delete-toast button'); await waitFor(`Boolean(document.querySelector(${JSON.stringify(main)}))`)
   const ids = () => evaluate("[...document.querySelectorAll('.g-list [data-reorder-id]')].map(row=>row.dataset.reorderId)")
   const originalOrder = await ids()
+  // Different execution times override manual moves.
+  await evaluate(`document.querySelector(${JSON.stringify(main+' .g-quest-handle')}).focus()`)
+  window.webContents.sendInputEvent({type:'keyDown',keyCode:'Down',modifiers:['alt']})
+  window.webContents.sendInputEvent({type:'keyUp',keyCode:'Down',modifiers:['alt']})
+  await evaluate("new Promise(resolve=>setTimeout(resolve,30))")
+  assert.deepEqual(await ids(),originalOrder)
+  // Matching times still allow the existing keyboard and pointer reordering.
+  await click(row('today-long')+' .g-time-duration button')
+  await waitFor(`Boolean(document.querySelector(${JSON.stringify(row('today-long')+' input[type=time]')}))`)
+  await evaluate(`{const input=document.querySelector(${JSON.stringify(row('today-long')+' input[type=time]')});Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(input,'10:00');input.dispatchEvent(new Event('input',{bubbles:true}));}`)
+  await click(row('today-long')+' .g-time-editor-actions button:last-child')
   await evaluate(`document.querySelector(${JSON.stringify(main+' .g-quest-handle')}).focus()`)
   for (const key of ['Down','Up']) {
     window.webContents.sendInputEvent({type:'keyDown',keyCode:key,modifiers:['alt']})

@@ -5,15 +5,16 @@ import { LevelRewardsPanel } from '../components/LevelRewards'
 import { RewardChoiceIcon } from '../components/RewardChoiceIcon'
 import { RewardModal } from '../components/RewardModal'
 import { Modal, PageHeader, ProgressBar } from '../components/Ui'
-import { accentColors, availableCharacter, characterOptionsForGender, genderOptions, heroStageForGender, heroStages, petStageForLevel, petStages, skinColors } from '../lib/character'
+import { accentColors, availableCharacter, characterOptionsForGender, genderOptions, heroStageForGender, heroStages, normalizeCharacter, petStageForLevel, petStages, skinColors } from '../lib/character'
 import { levelProgress } from '../lib/game'
+import { equipmentArtFile, equipmentForAppearance, equipmentSets, hasEquipmentArt, renderedOutfitLabel, selectEquipment } from '../lib/heroEquipment'
 import { useStore } from '../lib/store'
 import type { CharacterAppearance, Reward, RewardDraft } from '../lib/types'
 import './progress.css'
 
 const tabs = [
   { slot: 'hair', label: 'Причёска' },
-  { slot: 'outfit', label: 'Одежда' },
+  { slot: 'outfit', label: 'Комплект' },
   { slot: 'weapon', label: 'Оружие' },
   { slot: 'accent', label: 'Цвет' },
 ] as const
@@ -26,6 +27,8 @@ export function ProgressPage() {
   const character = availableCharacter(state.profile.character, level)
   const options = characterOptionsForGender(character.gender)
   const stage = heroStageForGender(level, character.gender)
+  const equipment = equipmentForAppearance(character, level)
+  const renderedWeapon = equipment && hasEquipmentArt(equipment.id, character.gender, level) ? equipment.weapon : 'none'
   const future = roadmapEntries(character.gender).filter((entry) => entry.level > level)
   const nextLevels = [...new Set(future.map((entry) => entry.level))].slice(0, 3)
   const [appearanceOpen, setAppearanceOpen] = useState(false)
@@ -62,7 +65,6 @@ export function ProgressPage() {
     <PageHeader title="Прогресс" />
     <section className="panel progress-summary" aria-label="Уровень, опыт и монеты">
       <div className="progress-summary__level">
-        <span className="progress-label">Уровень героя</span>
         <div className="progress-summary__heading"><h2>Уровень {progress.level}</h2><span className="progress-rank">{stage.label}</span></div>
       </div>
       <div className="progress-summary__xp">
@@ -75,12 +77,15 @@ export function ProgressPage() {
     <section className="progress-hero-section" aria-labelledby="progress-hero-title">
       <h2 id="progress-hero-title" className="progress-section-title">Герой</h2>
       <div className="panel progress-hero">
-        <CharacterStage appearance={character} level={level} className="progress-hero__stage" />
+        <div className="progress-hero__visual">
+          <div className="progress-hero__brand"><strong>YDN</strong><span>Герой и спутник</span></div>
+          <div className="progress-hero__scene"><div className="character-podium" aria-hidden="true" /><CharacterStage appearance={character} level={level} className="progress-hero__stage" /></div>
+        </div>
         <div className="progress-hero__details">
           <h3>{state.profile.name.trim() || 'Игрок'}</h3>
-          <p className="progress-hero__rank"><span>Уровень {progress.level}</span><span className="progress-rank">{stage.label}</span></p>
-          <div className="progress-hero__group"><h4>Экипировка</h4><span>{options.outfit.find((item) => item.id === character.outfit)?.label}</span><span>{options.weapon.find((item) => item.id === character.weapon)?.label}</span></div>
-          <div className="progress-hero__group"><h4>Питомец</h4><span>{state.profile.petName?.trim() || 'Искра'} · {options.pet.find((item) => item.id === character.pet)?.label}</span></div>
+          <p className="progress-hero__rank"><span className="progress-rank">{stage.label}</span></p>
+          <div className="progress-hero__group"><h4><Shirt size={16} aria-hidden="true" />Экипировка</h4><span>{renderedOutfitLabel(character, level)}</span><span>{options.weapon.find((item) => item.id === renderedWeapon)?.label}</span></div>
+          <div className="progress-hero__group progress-hero__pet"><h4><PawPrint size={16} aria-hidden="true" />Питомец · {petStageForLevel(level).label}</h4><span>{state.profile.petName?.trim() || 'Искра'} · {options.pet.find((item) => item.id === character.pet)?.label}</span></div>
           <div className="progress-hero__actions"><button className="button button--primary" onClick={() => setAppearanceOpen(true)}>Изменить образ</button><button className="button button--secondary" onClick={() => setRoadmapOpen(true)}>Весь путь развития <ChevronRight size={16} /></button></div>
         </div>
       </div>
@@ -107,11 +112,21 @@ function AppearanceEditor({ level, onClose }: { level: number; onClose: () => vo
   const { state, updateProfile } = useStore()
   const [name, setName] = useState(state.profile.name)
   const [petName, setPetName] = useState(state.profile.petName ?? 'Искра')
-  const [character, setCharacter] = useState(() => availableCharacter(state.profile.character, level))
+  const [character, setCharacter] = useState(() => normalizeCharacter(state.profile.character))
+  const [equipmentChanged, setEquipmentChanged] = useState(false)
   const [tab, setTab] = useState<Slot>('hair')
   const options = characterOptionsForGender(character.gender)
+  const equipment = equipmentForAppearance(character, level)
+  const renderedEquipment = equipment && hasEquipmentArt(equipment.id, character.gender, level) ? equipment : undefined
+  const weapon = options.weapon.find((item) => item.id === (renderedEquipment?.weapon ?? 'none'))
   const save = () => {
-    updateProfile({ name: name.trim() || 'Игрок', petName: petName.trim() || 'Искра', character: availableCharacter(character, level) })
+    const selected = normalizeCharacter(character)
+    // Keep legacy pairs intact until the user explicitly chooses a complete set.
+    if (!equipmentChanged) {
+      selected.outfit = state.profile.character?.outfit ?? selected.outfit
+      selected.weapon = state.profile.character?.weapon ?? selected.weapon
+    }
+    updateProfile({ name: name.trim() || 'Игрок', petName: petName.trim() || 'Искра', character: selected })
     onClose()
   }
   return <Modal title="Изменить образ" subtitle="Настройте внешний вид героя" onClose={onClose} wide>
@@ -121,7 +136,29 @@ function AppearanceEditor({ level, onClose }: { level: number; onClose: () => vo
         <div className="appearance-editor__tabs" role="tablist" aria-label="Элементы образа">{tabs.map((item) =>
           <button type="button" role="tab" aria-selected={tab === item.slot} aria-controls="appearance-choices" className={tab === item.slot ? 'is-active' : ''} key={item.slot} onClick={() => setTab(item.slot)}>{item.label}</button>
         )}</div>
-        <div id="appearance-choices" className="appearance-editor__choices" role="tabpanel">{options[tab].map((item) => {
+        {tab === 'outfit' ? <div id="appearance-choices" className="appearance-editor__equipment" role="tabpanel">
+          <p className="appearance-editor__equipment-note">Одежда и оружие выбираются одним комплектом.</p>
+          <div className="appearance-editor__choices appearance-editor__equipment-choices">{equipmentSets.map((item) => {
+            const locked = item.level > level
+            const artLevel = item.id === 'crystal' ? Math.max(level, item.level) : level
+            const ready = hasEquipmentArt(item.id, character.gender, artLevel)
+            const selected = renderedEquipment?.id === item.id
+            const outfitLabel = item.id === 'casual'
+              ? renderedOutfitLabel({ ...character, outfit: item.outfit, weapon: item.weapon }, level)
+              : options.outfit.find((option) => option.id === item.outfit)?.label ?? item.label
+            return <button key={item.id} data-equipment-id={item.id} type="button" className={`appearance-editor__choice appearance-editor__equipment-choice ${selected ? 'is-selected' : ''} ${locked || !ready ? 'is-locked' : ''}`} disabled={locked || !ready} aria-pressed={selected} onClick={() => {
+              setCharacter((current) => selectEquipment(current, item.id, level))
+              setEquipmentChanged(true)
+            }}>
+              <span className="appearance-editor__equipment-thumbnail" aria-hidden="true">{ready ? <img src={`${import.meta.env.BASE_URL}${equipmentArtFile(item.id, character.gender, artLevel)}`} alt="" /> : <Shirt size={24} />}</span>
+              <span className="appearance-editor__choice-copy"><strong>{item.id === 'crystal' ? item.label : outfitLabel}</strong><small>{item.detail}</small>{!ready && <small>Образ пока недоступен</small>}</span>
+              {locked ? <em><LockKeyhole size={14} /> Ур. {item.level}</em> : selected ? <Check className="appearance-editor__selected-icon" size={17} aria-hidden="true" /> : null}
+            </button>
+          })}</div>
+        </div>
+        : tab === 'weapon' ? <div id="appearance-choices" className="appearance-editor__stage-outfit" role="tabpanel"><Shield size={25} aria-hidden="true" /><strong>{weapon?.label}</strong><p>{renderedEquipment ? `Входит в комплект «${renderedOutfitLabel(character, level)}».` : 'В текущем образе оружие отсутствует.'}</p><span>Чтобы сменить оружие, выберите комплект во вкладке «Комплект».</span><button type="button" className="button button--secondary" onClick={() => setTab('outfit')}>Выбрать комплект</button></div>
+        : tab === 'hair' && renderedEquipment && renderedEquipment.id !== 'casual' ? <div id="appearance-choices" className="appearance-editor__stage-outfit" role="tabpanel"><Scissors size={25} aria-hidden="true" /><strong>Причёска входит в комплект</strong><p>В комплекте «{renderedOutfitLabel(character, level)}» причёска уже нарисована вместе с образом.</p><span>Выбранная причёска сохранена для обычного образа. Чтобы изменить её, переключитесь на обычный комплект.</span><button type="button" className="button button--secondary" onClick={() => setTab('outfit')}>Выбрать комплект</button></div>
+        : <div id="appearance-choices" className="appearance-editor__choices" role="tabpanel">{options[tab].map((item) => {
           const locked = item.level > level
           const selected = character[tab] === item.id
           return <button key={item.id} type="button" className={`appearance-editor__choice ${selected ? 'is-selected' : ''} ${locked ? 'is-locked' : ''}`} disabled={locked} aria-pressed={selected} onClick={() => setCharacter((current) => ({ ...current, [tab]: item.id }))}>
@@ -129,7 +166,7 @@ function AppearanceEditor({ level, onClose }: { level: number; onClose: () => vo
             <span className="appearance-editor__choice-copy"><strong>{item.label}</strong>{item.detail && <small>{item.detail}</small>}</span>
             {locked ? <em><LockKeyhole size={14} /> Ур. {item.level}</em> : selected ? <Check className="appearance-editor__selected-icon" size={17} aria-hidden="true" /> : null}
           </button>
-        })}</div>
+        })}</div>}
       </div>
       <details className="appearance-editor__identity"><summary><span>Настройки героя и питомца<small>Имя, внешность и спутник</small></span><ChevronDown size={17} aria-hidden="true" /></summary>
         <div className="appearance-editor__identity-grid">
@@ -149,7 +186,8 @@ function roadmapEntries(gender: CharacterAppearance['gender']) {
   const options = characterOptionsForGender(gender)
   const entries = [
     { key: 'start', level: 1, title: 'Начало пути · Лисёнок', kind: 'Герой и питомец' },
-    ...tabs.flatMap(({ slot }) => options[slot].filter((item) => item.level > 1).map((item) => ({ key: `${slot}-${item.id}`, level: item.level, title: item.label, kind: slot === 'hair' ? 'Причёска' : slot === 'outfit' ? 'Одежда' : slot === 'weapon' ? 'Оружие' : 'Цвет' }))),
+    ...(['hair', 'accent'] as const).flatMap((slot) => options[slot].filter((item) => item.level > 1).map((item) => ({ key: `${slot}-${item.id}`, level: item.level, title: item.label, kind: slot === 'hair' ? 'Причёска' : 'Цвет' }))),
+    ...equipmentSets.filter((item) => item.level > 1).map((item) => ({ key: `equipment-${item.id}`, level: item.level, title: item.id === 'crystal' ? item.label : options.outfit.find((option) => option.id === item.outfit)?.label ?? item.label, kind: 'Комплект' })),
     ...options.pet.filter((item) => item.level > 1).map((item) => ({ key: `pet-${item.id}`, level: item.level, title: item.label, kind: 'Питомец' })),
     ...heroStages.filter((item) => item.level > 1).map((item) => ({ key: `stage-${item.id}`, level: item.level, title: heroStageForGender(item.level, gender).label, kind: 'Этап героя' })),
     ...petStages.filter((item) => item.level > 1 && item.level < 100).map((item) => ({ key: `pet-stage-${item.level}`, level: item.level, title: `Спутник: ${petStageForLevel(item.level).label}`, kind: 'Развитие питомца' })),
@@ -158,7 +196,7 @@ function roadmapEntries(gender: CharacterAppearance['gender']) {
 }
 
 function UnlockIcon({ kind }: { kind: string }) {
-  const Icon = kind === 'Причёска' ? Scissors : kind === 'Одежда' ? Shirt : kind === 'Оружие' ? Shield : kind === 'Цвет' ? Palette : kind === 'Питомец' || kind === 'Развитие питомца' ? PawPrint : Sparkles
+  const Icon = kind === 'Причёска' ? Scissors : kind === 'Комплект' ? Shirt : kind === 'Цвет' ? Palette : kind === 'Питомец' || kind === 'Развитие питомца' ? PawPrint : Sparkles
   return <Icon size={18} aria-hidden="true" />
 }
 

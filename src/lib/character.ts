@@ -1,4 +1,5 @@
 import type { CharacterAppearance } from './types'
+import { equipmentSets } from './equipmentSets'
 
 export const defaultCharacter: CharacterAppearance = {
   gender: 'boy', skin: 'medium', hair: 'short', outfit: 'casual', weapon: 'none', accent: 'azure', pet: 'fox',
@@ -160,8 +161,8 @@ export function availableCharacter(appearance: CharacterAppearance | undefined, 
   }
 }
 
-// These are visual chapters, not literal years. Shape and facial features continue to
-// change on every level between them, while the final portrait is a mature adult.
+// Visual chapters use existing illustrated portraits at their thresholds.
+// visualAge is descriptive only; PNG facial features do not interpolate between levels.
 export const heroStages = [
   { level: 1, id: 'child', label: 'Малыш', detail: 'Первые шаги без доспехов', visualAge: 8 },
   { level: 10, id: 'teen', label: 'Подросток', detail: 'Обретает уверенность и собственный стиль', visualAge: 13 },
@@ -217,36 +218,29 @@ export function petStageForLevel(level: number) {
 }
 
 export const characterMilestones = [
+  ...equipmentSets.filter(set => set.id !== 'casual' && set.id !== 'crystal').map(set => ({ level: set.level, kind: 'hero' as const, title: `Комплект «${set.label}»`, detail: set.detail })),
   { level: 1, kind: 'hero', title: 'Начало приключения', detail: 'Ребёнок в обычной одежде, без доспехов и оружия' },
-  { level: 2, kind: 'hero', title: 'Первый щит', detail: 'Новый выбор снаряжения' },
-  { level: 3, kind: 'hero', title: 'Доспех стража', detail: 'Первый защитный комплект' },
-  { level: 4, kind: 'hero', title: 'Первый меч', detail: 'Открывается меч героя' },
   { level: 5, kind: 'pet', title: 'Питомец подрастает', detail: 'Стадия «Искатель»' },
-  { level: 6, kind: 'hero', title: 'Посох путешественника', detail: 'Новый выбор снаряжения' },
-  { level: 8, kind: 'hero', title: 'Образ мага', detail: 'Новый костюм героя' },
-  { level: 10, kind: 'hero', title: 'Подросток и лук следопыта', detail: 'Герой взрослеет и открывает новый стиль боя' },
-  { level: 12, kind: 'hero', title: 'Образ следопыта', detail: 'Новый костюм героя' },
+  { level: 10, kind: 'hero', title: 'Подросток', detail: 'Новый возрастной образ героя' },
   { level: 12, kind: 'pet', title: 'Совёнок', detail: 'Новый спутник на выбор' },
   { level: 15, kind: 'pet', title: 'Смелый спутник', detail: 'Третья стадия питомца' },
-  { level: 20, kind: 'hero', title: 'Два клинка', detail: 'Новый выбор снаряжения' },
-  { level: 25, kind: 'hero', title: 'Молодой герой', detail: 'Взросление и доспех чемпиона' },
+  { level: 25, kind: 'hero', title: 'Молодой герой', detail: 'Новый возрастной образ и дорожное снаряжение' },
   { level: 30, kind: 'pet', title: 'Спутник-хранитель', detail: 'Четвёртая стадия питомца' },
   { level: 50, kind: 'pet', title: 'Мифический спутник', detail: 'Пятая стадия питомца' },
   { level: 50, kind: 'hero', title: 'Взрослый герой', detail: 'Уверенный образ и корона' },
-  { level: 60, kind: 'hero', title: 'Звёздный доспех', detail: 'Новый образ героя' },
   { level: 75, kind: 'hero', title: 'Опытный герой', detail: 'Зрелый образ и золотое сияние' },
   { level: 100, kind: 'pet', title: 'Дракончик', detail: 'Новый спутник и финальная стадия питомца' },
   { level: 100, kind: 'hero', title: 'Кристальный меч', detail: 'Зрелый герой получает легендарное оружие' },
-] as const
+].sort((a, b) => a.level - b.level)
 
 const girlMilestoneCopy: Record<string, { title?: string; detail?: string }> = {
   'Доспех стража': { title: 'Доспех стражницы' },
   'Первый меч': { detail: 'Открывается меч героини' },
   'Посох путешественника': { title: 'Посох путешественницы' },
   'Образ мага': { title: 'Образ волшебницы', detail: 'Новый костюм героини' },
-  'Подросток и лук следопыта': { title: 'Юная искательница и лук', detail: 'Героиня взрослеет и открывает новый стиль боя' },
+  'Подросток': { title: 'Юная искательница', detail: 'Новый возрастной образ героини' },
   'Образ следопыта': { title: 'Образ следопытки', detail: 'Новый костюм героини' },
-  'Молодой герой': { title: 'Юная героиня', detail: 'Взросление и броня чемпионки' },
+  'Молодой герой': { title: 'Юная героиня', detail: 'Новый возрастной образ и дорожное снаряжение' },
   'Взрослый герой': { title: 'Взрослая героиня' },
   'Звёздный доспех': { title: 'Звёздная броня', detail: 'Новый образ героини' },
   'Опытный герой': { title: 'Опытная героиня' },

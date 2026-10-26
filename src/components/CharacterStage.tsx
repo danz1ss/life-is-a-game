@@ -7,6 +7,7 @@ import './CharacterStage.css'
 /**
  * The two portraits share one SVG coordinate space. The companion's feet line up
  * with the hero's, so resizing the stage cannot change their distance or overlap.
+ * The viewBox also reserves space around both complete artwork frames.
  */
 export function CharacterStage({ appearance, level = 1, className = '' }: {
   appearance?: CharacterAppearance
@@ -17,7 +18,7 @@ export function CharacterStage({ appearance, level = 1, className = '' }: {
 
   return <svg
     className={`character-stage ${className}`.trim()}
-    viewBox="0 0 1380 1536"
+    viewBox="-96 -72 1562 1704"
     preserveAspectRatio="xMidYMid meet"
     xmlns="http://www.w3.org/2000/svg"
     role="img"

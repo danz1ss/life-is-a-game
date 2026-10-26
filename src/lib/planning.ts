@@ -1,18 +1,25 @@
 import { isQuestForDate } from './game'
 import type { AppState, Quest } from './types'
 
+/** Execution time only; equal times retain the caller's existing order. */
+export function compareQuestTime(a: Quest, b: Quest): number {
+  if (!a.scheduledTime) return b.scheduledTime ? 1 : 0
+  if (!b.scheduledTime) return -1
+  return a.scheduledTime.localeCompare(b.scheduledTime)
+}
+
 export function questsForDay(state: AppState, date: string): Quest[] {
   const plan = state.dayPlans[date]
   const order = new Map(plan?.questOrder.map((id, index) => [id, index]) ?? [])
   return state.quests.filter((quest) => isQuestForDate(quest, date))
     .map((quest) => ({ ...quest, isMain: plan?.mainQuestId === quest.id }))
-    .sort((a, b) => (order.get(a.id) ?? Infinity) - (order.get(b.id) ?? Infinity) || a.order - b.order)
+    .sort((a, b) => compareQuestTime(a, b) || (order.get(a.id) ?? Infinity) - (order.get(b.id) ?? Infinity) || a.order - b.order)
 }
 
 export function upcomingQuests(quests: Quest[], tomorrow: string): Quest[] {
   return quests.filter((quest) => !quest.archivedAt && !quest.repeatDays.length && !quest.completedDates.length && (!quest.dueDate || quest.dueDate > tomorrow))
-    .sort((a, b) => a.dueDate && b.dueDate ? a.dueDate.localeCompare(b.dueDate) || a.order - b.order
-      : a.dueDate ? -1 : b.dueDate ? 1 : a.order - b.order)
+    .sort((a, b) => a.dueDate && b.dueDate ? a.dueDate.localeCompare(b.dueDate) || compareQuestTime(a, b) || a.order - b.order
+      : a.dueDate ? -1 : b.dueDate ? 1 : compareQuestTime(a, b) || a.order - b.order)
 }
 
 export function assignMainQuest(state: AppState, id: string | null, date: string): AppState {

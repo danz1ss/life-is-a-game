@@ -1,12 +1,13 @@
 {
   "name": "life-is-a-game",
-  "version": "1.0.0",
+  "version": "1.2.0",
   "private": true,
   "description": "Локальная RPG-система саморазвития",
   "main": "electron/main.cjs",
   "type": "module",
   "scripts": {
     "dev": "concurrently -k \"vite --host 127.0.0.1\" \"wait-on http://127.0.0.1:5173 && node scripts/launch-electron.cjs\"",
+    "prebuild": "node scripts/sync-hero-artwork.cjs",
     "build": "tsc -b && vite build",
     "preview": "vite preview --host 127.0.0.1",
     "desktop": "node scripts/launch-electron.cjs --dist",

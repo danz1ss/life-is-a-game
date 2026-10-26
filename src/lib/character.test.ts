@@ -63,7 +63,7 @@ describe('hero and companion progression', () => {
     expect(heroStageForGender(100, 'girl')).toMatchObject({ id: 'legend', label: 'Зрелая героиня', maturity: 1 })
     expect(characterMilestonesForGender('girl').map((milestone) => milestone.level))
       .toEqual(characterMilestonesForGender('boy').map((milestone) => milestone.level))
-    expect(characterMilestonesForGender('girl').find((milestone) => milestone.level === 25)?.title).toBe('Юная героиня')
+    expect(characterMilestonesForGender('girl').find((milestone) => milestone.title === 'Юная героиня')?.level).toBe(25)
     expect(characterMilestonesForGender('girl').find((milestone) => milestone.title === 'Кристальный меч')?.detail)
       .toContain('Зрелая героиня')
   })

@@ -12,7 +12,7 @@ const invalidPayload = JSON.stringify({ version: 4, skills: [], quests: [], prof
 if (!process.versions.electron) {
   const { spawnSync } = require('node:child_process')
   const electron = require('electron')
-  for (const scenario of (process.env.LIFE_GAME_SMOKE_CASES?.split(',') ?? ['close', 'corrupt', 'null', 'import', 'retry', 'planning', 'review', 'levels', 'weekly', 'weekly-review', 'today-cards', 'skill-picker', 'tree-ux', 'today-summary'])) {
+  for (const scenario of (process.env.LIFE_GAME_SMOKE_CASES?.split(',') ?? ['close', 'corrupt', 'null', 'import', 'retry', 'planning', 'review', 'levels', 'weekly', 'weekly-review', 'today-cards', 'skill-picker', 'tree-ux', 'today-summary', 'time-sort', 'evolution', 'equipment'])) {
     const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'life-game-smoke-'))
     try {
       if (scenario === 'corrupt' || scenario === 'null') {
@@ -24,9 +24,9 @@ if (!process.versions.electron) {
       fs.writeFileSync(path.join(directory, 'invalid-backup.json'), invalidPayload)
       const env = { ...process.env, LIFE_GAME_USER_DATA: directory, LIFE_GAME_LOAD_DIST: '1', LIFE_GAME_SMOKE: scenario }
       delete env.ELECTRON_RUN_AS_NODE
-      const result = spawnSync(electron, [__filename], { cwd: project, env, windowsHide: true, timeout: 30_000, encoding: 'utf8' })
+      const result = spawnSync(electron, [__filename], { cwd: project, env, windowsHide: true, timeout: ['evolution', 'equipment'].includes(scenario) ? 120_000 : 30_000, encoding: 'utf8' })
       assert.equal(result.status, 0, `${scenario}: ${result.error ?? ''}\n${result.stdout}\n${result.stderr}`)
-      if (scenario === 'weekly-review' || scenario === 'tree-ux') {
+      if (scenario === 'weekly-review' || scenario === 'tree-ux' || scenario === 'evolution' || scenario === 'equipment') {
         const restarted = spawnSync(electron, [__filename], { cwd: project, env: { ...env, LIFE_GAME_SMOKE: `${scenario}-persist` }, windowsHide: true, timeout: 30_000, encoding: 'utf8' })
         assert.equal(restarted.status, 0, `${scenario} restart: ${restarted.error ?? ''}\n${restarted.stdout}\n${restarted.stderr}`)
       }
@@ -37,8 +37,8 @@ if (!process.versions.electron) {
       else {
         const state = JSON.parse(row.payload)
         const completed = scenario === 'close' || scenario === 'retry' || scenario === 'review'
-        assert.equal(state.profile.totalXp, scenario === 'levels' ? 650 : completed ? 50 : 0)
-        assert.equal(state.history.length, scenario === 'levels' ? 3 : completed ? 1 : 0)
+        assert.equal(state.profile.totalXp, ['evolution', 'equipment'].includes(scenario) ? 179685 : scenario === 'levels' ? 650 : completed ? 50 : 0)
+        assert.equal(state.history.length, scenario === 'equipment' ? 0 : scenario === 'evolution' ? 2 : scenario === 'levels' ? 3 : completed ? 1 : 0)
         if (scenario === 'levels') {
           assert.equal(state.profile.gold, 10, 'Only the quest grants coins; reaching level five has no coin bonus')
           assert.equal(state.history.find((event) => event.type === 'level').gold, 0)
@@ -69,8 +69,13 @@ if (!process.versions.electron) {
   const { app, dialog } = require('electron')
   // The isolated smoke harness also runs on hosts without a usable native GPU.
   app.disableHardwareAcceleration()
+  // Renderer assertions must advance CSS time even when another Windows app
+  // covers the temporary test window. This affects only the smoke harness.
+  app.commandLine.appendSwitch('disable-features', 'CalculateNativeWinOcclusion')
+  app.commandLine.appendSwitch('disable-renderer-backgrounding')
+  app.commandLine.appendSwitch('disable-background-timer-throttling')
   const scenario = process.env.LIFE_GAME_SMOKE
-  const timeout = setTimeout(() => { console.error('Electron smoke test timed out'); app.exit(1) }, scenario === 'tree-ux' ? 28_000 : 20_000)
+  const timeout = setTimeout(() => { console.error('Electron smoke test timed out'); app.exit(1) }, ['evolution', 'equipment'].includes(scenario) ? 115_000 : scenario === 'tree-ux' ? 28_000 : 20_000)
   app.on('will-quit', () => clearTimeout(timeout))
   dialog.showOpenDialog = async () => ({ canceled: false, filePaths: [path.join(process.env.LIFE_GAME_USER_DATA, 'invalid-backup.json')] })
 
@@ -78,7 +83,10 @@ if (!process.versions.electron) {
     window.hide()
     window.webContents.setBackgroundThrottling(false)
     window.webContents.once('did-finish-load', async () => {
-      const evaluate = (code) => window.webContents.executeJavaScript(code)
+      const evaluate = async (code) => {
+        try { return await window.webContents.executeJavaScript(code) }
+        catch (error) { console.error('Renderer expression failed:', code); throw error }
+      }
       const waitFor = async (expression) => {
         for (let attempt = 0; attempt < 200; attempt++) {
           if (await evaluate(expression)) return
@@ -122,8 +130,14 @@ if (!process.versions.electron) {
             await require('./test-skill-picker.cjs')({ window, evaluate, waitFor, navigate })
           } else if (scenario === 'tree-ux' || scenario === 'tree-ux-persist') {
             await require('./test-tree-ux.cjs')({ window, evaluate, waitFor, navigate })
+          } else if (scenario === 'time-sort') {
+            await require('./test-time-sort.cjs')({ window, evaluate, waitFor, navigate })
           } else if (scenario === 'today-summary') {
             await require('./test-today-summary.cjs')({ window, evaluate, waitFor, navigate })
+          } else if (scenario === 'evolution' || scenario === 'evolution-persist') {
+            await require('./test-evolution.cjs')({ scenario, window, evaluate, waitFor, navigate })
+          } else if (scenario === 'equipment' || scenario === 'equipment-persist') {
+            await require('./test-equipment.cjs')({ scenario, window, evaluate, waitFor, navigate })
           } else if (scenario === 'import') {
             await evaluate("window.confirm = () => true; [...document.querySelectorAll('.sidebar-actions .nav-item')].find((button) => button.textContent.includes('Данные приложения')).click()")
             await waitFor("Boolean(document.querySelector('.data-modal'))")

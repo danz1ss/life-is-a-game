@@ -127,12 +127,14 @@ export function DashboardPage({ onNavigate, onOpenSkill }: { onNavigate: (page: 
           <section className="g-hero g-journey" aria-label="Герой и следующий уровень">
             <section className="g-character">
               <div className="g-character-heading">
-                <div><h2>{state.profile.name}</h2><span>Ваш герой</span></div>
+                <div className="g-character-brand"><span className="g-ydn-logo" aria-label="YDN">YDN</span><h2>{state.profile.name}<span> · Ваш герой</span></h2></div>
+                <div className="g-level-badge"><span>Уровень</span><strong>{String(level.level).padStart(2, '0')}</strong></div>
               </div>
               <div className="g-character-body">
-                <div className="g-stage"><CharacterStage appearance={appearance} level={highest} /></div>
+                <div className="g-stage"><div className="character-podium" aria-hidden="true" /><CharacterStage appearance={appearance} level={highest} /></div>
                 <div className="g-character-details">
                   <div className="g-companion" aria-label={`Питомец ${petName}, ${petLabel}. Стадия роста: ${petStageForLevel(highest).label}`}>
+                    <span className="g-companion-kicker">Питомец{petStageForLevel(highest).level === 5 ? '-искатель' : ''}</span>
                     <span className="g-companion-name">{petName} · {petLabel.toLocaleLowerCase('ru-RU')}</span>
                     <span className="g-companion-stage">Стадия питомца: <strong>{petStageForLevel(highest).label}</strong></span>
                   </div>

@@ -4,7 +4,7 @@ import { QuestCard } from '../components/QuestCard'
 import { QuestModal } from '../components/QuestModal'
 import { EmptyState, Modal, PageHeader } from '../components/Ui'
 import { activeGoalForSkill, dateKey, dateLabel, formatDuration, isQuestForDate, isQuestOverdue, isQuestSkipped, nextDateKey, weekDays } from '../lib/game'
-import { questsForDay, upcomingQuests } from '../lib/planning'
+import { compareQuestTime, questsForDay, upcomingQuests } from '../lib/planning'
 import { groupArchivedQuests } from '../lib/questArchive'
 import { useStore } from '../lib/store'
 import type { Quest, QuestDraft } from '../lib/types'
@@ -54,13 +54,14 @@ export function QuestsPage({ onNavigate, focusTomorrow = 0 }: { onNavigate: (pag
   const todayCompleted = todayQuests.filter((quest) => quest.completedDates.includes(today) || (quest.repeatDays.length === 0 && quest.completedDates.length > 0)).length
   const todaySkipped = todayQuests.filter((quest) => isQuestSkipped(quest, today)).length
   const overdue = filtered.filter((quest) => isQuestOverdue(quest, today, Boolean(quest.dueDate && state.dayPlans[quest.dueDate]?.closed)))
+    .sort((a, b) => (a.dueDate ?? '').localeCompare(b.dueDate ?? '') || compareQuestTime(a, b))
   const upcoming = upcomingQuests(filtered, tomorrow)
   const tomorrowAll = useMemo(() => questsForDay(state, tomorrow), [state, tomorrow])
   const filteredIds = new Set(filtered.map((quest) => quest.id))
   const tomorrowQuests = tomorrowAll.filter((quest) => filteredIds.has(quest.id))
-  const recurring = filtered.filter((quest) => !quest.archivedAt && quest.repeatDays.length > 0)
+  const recurring = filtered.filter((quest) => !quest.archivedAt && quest.repeatDays.length > 0).sort(compareQuestTime)
   const archived = filtered.filter((quest) => Boolean(quest.archivedAt) || (quest.repeatDays.length === 0 && quest.completedDates.length > 0))
-  const archiveGroups = groupArchivedQuests(archived, state.history)
+  const archiveGroups = groupArchivedQuests(archived, state.history).map(group => ({ ...group, quests: [...group.quests].sort(compareQuestTime) }))
 
   const moveOverdue = (quest: Quest, when: 'today' | 'tomorrow') => {
     const currentDay = dateKey()

@@ -4,17 +4,21 @@ import { characterMilestonesForGender } from '../lib/character'
 import { useStore } from '../lib/store'
 import type { PersonalLevelReward } from '../lib/types'
 import { Modal } from './Ui'
+import { HeroEvolution } from './HeroEvolution'
+import { evolutionBetween } from '../lib/characterVisual'
 
 export function LevelUpModal() {
   const { state, acknowledgeLevelRewards } = useStore()
   const { highestLevel, acknowledgedLevel, personal } = state.levelRewards
   if (highestLevel <= acknowledgedLevel) return null
+  const evolution = evolutionBetween(acknowledgedLevel, highestLevel, state.profile.character)
   const unlocked = personal.filter((reward) => reward.level > acknowledgedLevel && reward.level <= highestLevel)
   const badges = Math.floor(highestLevel / 5) - Math.floor(acknowledgedLevel / 5)
   const newLooks = characterMilestonesForGender(state.profile.character?.gender ?? 'boy').filter((item) => item.level > acknowledgedLevel && item.level <= highestLevel)
   return <Modal title={`Новый уровень: ${highestLevel}!`} subtitle="Ваши действия превращаются в прогресс" onClose={acknowledgeLevelRewards}>
-    <div className="level-up" data-testid="level-up">
-      <div className="level-up__medal"><Trophy size={36} /><strong>{highestLevel}</strong></div>
+    <div className={`level-up ${evolution.changed ? 'level-up--evolution' : ''}`} data-testid="level-up">
+      {evolution.changed ? <HeroEvolution key={`${acknowledgedLevel}-${highestLevel}-${state.profile.character?.gender}`} fromLevel={acknowledgedLevel} toLevel={highestLevel} appearance={state.profile.character} />
+        : <div className="level-up__medal"><Trophy size={36} /><strong>{highestLevel}</strong></div>}
       {badges > 0 && <p>Новых памятных значков: {badges}. Они сохранены в профиле.</p>}
       {newLooks.length > 0 && <div className="level-unlocked"><strong>Новые образы и этапы</strong>{newLooks.map((item) => <span key={`${item.level}-${item.title}`}>{item.kind === 'pet' ? <PawPrint size={15} /> : <Sparkles size={15} />} {item.level} уровень · {item.title}</span>)}<small>Они доступны во вкладке «Прогресс».</small></div>}
       {unlocked.length > 0 && <div className="level-unlocked"><strong>Открылись личные поощрения</strong>{unlocked.map((reward) => <span key={reward.id}><Gift size={15} /> {reward.title}</span>)}<small>Заберите их в разделе развития во вкладке «Прогресс».</small></div>}
