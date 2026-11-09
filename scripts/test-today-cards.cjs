@@ -10,7 +10,7 @@ module.exports = async ({ window, evaluate, waitFor, navigate }) => {
     const base = state.quests[0], today = base.dueDate;
     state.quests = [
       {...base,id:'today-main',title:'Подготовить первую версию приложения',description:'Проверить основные сценарии и собрать изменения для следующего выпуска.',difficulty:'medium',scheduledTime:'10:00',durationMinutes:90,repeatDays:[],completedDates:[],skippedDates:[],order:0},
-      {...base,id:'today-long',title:'Разобрать заметки по проекту и подготовить подробный план дальнейших изменений',description:'Собрать вопросы, проверить длинное описание и уточнить следующий шаг. '.repeat(2),difficulty:'easy',scheduledTime:'11:00',durationMinutes:30,repeatDays:[],completedDates:[],skippedDates:[],order:1},
+      {...base,id:'today-long',title:'Разобрать заметки по проекту и подготовить подробный план дальнейших изменений',description:'Собрать вопросы, проверить длинное описание и уточнить следующий шаг. '.repeat(2),skillId:null,difficulty:'easy',scheduledTime:'11:00',durationMinutes:30,repeatDays:[],completedDates:[],skippedDates:[],order:1},
       {...base,id:'today-done',title:'Прочитать главу книги',description:'Выполненная задача остаётся различимой.',skillId:'reading',difficulty:'easy',scheduledTime:'12:00',durationMinutes:30,repeatDays:[],completedDates:[today],skippedDates:[],order:2},
       {...base,id:'today-skipped',title:'Сделать тренировку',description:'',skillId:'sport',difficulty:'hard',scheduledTime:null,durationMinutes:45,repeatDays:[],completedDates:[],skippedDates:[today],order:3}
     ];
@@ -34,7 +34,13 @@ module.exports = async ({ window, evaluate, waitFor, navigate }) => {
         titlesAligned:Math.abs(a.left-b.left)<1,
         stripe:{width:getComputedStyle(main,'::before').width,left:getComputedStyle(main,'::before').left,border:getComputedStyle(main,'::before').borderLeftWidth,radius:getComputedStyle(main,'::before').borderTopLeftRadius,color:getComputedStyle(main,'::before').borderLeftColor},
         rewards:cards.every(card=>card.querySelectorAll('.g-quest-rewards').length===1 && !card.querySelector('.quest-meta') && card.querySelectorAll('.lucide-coins').length===1),
-        overlap:cards.some(card=>{const reward=card.querySelector('.g-quest-rewards').getBoundingClientRect(), time=card.querySelector('.g-quest-time').getBoundingClientRect();return reward.left<time.right-1 && reward.right>time.left+1 && reward.top<time.bottom-1 && reward.bottom>time.top+1}),
+        overlap:cards.some(card=>{const reward=card.querySelector('.g-quest-rewards').getBoundingClientRect(), time=card.querySelector('.g-time-duration').getBoundingClientRect();return reward.left<time.right-1 && reward.right>time.left+1 && reward.top<time.bottom-1 && reward.bottom>time.top+1}),
+        timesAligned:cards.every(card=>Math.abs(card.querySelector('.g-time-duration button').getBoundingClientRect().left - cards[0].querySelector('.g-time-duration button').getBoundingClientRect().left)<1),
+        rewardsAligned:cards.every(card=>{
+          const footer=card.querySelector('.quest-card__footer').getBoundingClientRect();
+          const reward=card.querySelector('.g-quest-rewards').getBoundingClientRect();
+          return Math.abs(reward.right-footer.right)<1 && card.getBoundingClientRect().right-reward.right>=14;
+        }),
         conflict:main.querySelector('.g-time-conflict')?.textContent,
         conflictBelow:main.querySelector('.g-time-conflict').getBoundingClientRect().top>=main.querySelector('.quest-card__footer').getBoundingClientRect().bottom-1,
         mainLabel:main.querySelector('.g-main-label').getBoundingClientRect().right<=main.querySelector('.quest-actions').getBoundingClientRect().left,
@@ -46,6 +52,8 @@ module.exports = async ({ window, evaluate, waitFor, navigate }) => {
     }`)
     assert.equal(result.overflow,false); assert.equal(result.overlap,false)
     assert.equal(result.titlesAligned,true); assert.equal(result.rewards,true)
+    assert.equal(result.timesAligned,true)
+    assert.equal(result.rewardsAligned,true,'Rewards share the right edge with room between the coins and the card border')
     assert.equal(result.stripe.width,'13px'); assert.ok(parseFloat(result.stripe.border)>=2.3 && parseFloat(result.stripe.border)<=3.1, 'Accent border stays about 3 CSS pixels after device-pixel rounding'); assert.equal(result.stripe.radius,'13px'); assert.equal(result.stripe.left,'-1px')
     assert.equal(result.ordinaryStripe,'none'); assert.deepEqual(result.states,[true,true])
     assert.equal(result.order,true); assert.equal(result.handleBefore,true)

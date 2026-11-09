@@ -18,14 +18,8 @@ export function CompanionPortrait({ species = 'fox', level = 1, className = '', 
         <stop offset=".55" stopColor={color} stopOpacity={stage >= 4 ? '.16' : '.07'} />
         <stop offset="1" stopColor={color} stopOpacity="0" />
       </radialGradient>
-      <linearGradient id={`${id}-ring`} x1="0" y1="1" x2="1" y2="0">
-        <stop stopColor="#1b6aaa" stopOpacity="0" />
-        <stop offset=".55" stopColor={color} stopOpacity=".9" />
-        <stop offset="1" stopColor="#fff8c6" stopOpacity=".36" />
-      </linearGradient>
     </defs>
     <ellipse cx="60" cy="68" rx="56" ry="50" fill={`url(#${id}-halo)`} />
-    {stage >= 4 && <ellipse cx="60" cy="93" rx="41" ry="7" fill="none" stroke={`url(#${id}-ring)`} strokeWidth="1.5" opacity=".8" />}
     <image href={art} x="0" y="0" width="120" height="120" preserveAspectRatio="xMidYMid meet" />
     {stage >= 2 && <g fill={color} opacity=".85">
       <path d="M15 35l1.8 4.2L21 41l-4.2 1.8L15 47l-1.8-4.2L9 41l4.2-1.8z" />
@@ -35,6 +29,5 @@ export function CompanionPortrait({ species = 'fox', level = 1, className = '', 
       <path d="M100 20l2 5 5 2-5 2-2 5-2-5-5-2 5-2z" />
       <circle cx="22" cy="85" r="1.3" />
     </g>}
-    {stage >= 5 && <path d="M28 28Q60 6 92 28" fill="none" stroke={`url(#${id}-ring)`} strokeWidth="1.4" opacity=".85" />}
   </svg>
 }

@@ -74,6 +74,7 @@ export function skillLevel(skill: Skill) {
 
 export function isQuestForDate(quest: Quest, value: string) {
   if (quest.archivedAt) return false
+  if (quest.repeatDays.length && quest.transferredDates?.includes(value)) return false
   if (quest.skippedDates.includes(value)) return true
   const date = new Date(`${value}T12:00:00`)
   if (quest.repeatDays.length > 0) return (!quest.dueDate || quest.dueDate <= value) && quest.repeatDays.includes(date.getDay())

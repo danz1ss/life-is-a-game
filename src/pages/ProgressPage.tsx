@@ -1,8 +1,7 @@
-import { Check, ChevronDown, ChevronRight, Coins, LockKeyhole, Palette, PawPrint, Pencil, Plus, Scissors, Shield, Shirt, Sparkles, Trash2 } from 'lucide-react'
+import { Check, ChevronDown, ChevronRight, Coins, LockKeyhole, Palette, PawPrint, Pencil, Plus, Shield, Shirt, Sparkles, Trash2 } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { CharacterStage } from '../components/CharacterStage'
 import { LevelRewardsPanel } from '../components/LevelRewards'
-import { RewardChoiceIcon } from '../components/RewardChoiceIcon'
 import { RewardModal } from '../components/RewardModal'
 import { Modal, PageHeader, ProgressBar } from '../components/Ui'
 import { accentColors, availableCharacter, characterOptionsForGender, genderOptions, heroStageForGender, heroStages, normalizeCharacter, petStageForLevel, petStages, skinColors } from '../lib/character'
@@ -13,7 +12,6 @@ import type { CharacterAppearance, Reward, RewardDraft } from '../lib/types'
 import './progress.css'
 
 const tabs = [
-  { slot: 'hair', label: 'Причёска' },
   { slot: 'outfit', label: 'Комплект' },
   { slot: 'weapon', label: 'Оружие' },
   { slot: 'accent', label: 'Цвет' },
@@ -114,7 +112,7 @@ function AppearanceEditor({ level, onClose }: { level: number; onClose: () => vo
   const [petName, setPetName] = useState(state.profile.petName ?? 'Искра')
   const [character, setCharacter] = useState(() => normalizeCharacter(state.profile.character))
   const [equipmentChanged, setEquipmentChanged] = useState(false)
-  const [tab, setTab] = useState<Slot>('hair')
+  const [tab, setTab] = useState<Slot>('outfit')
   const options = characterOptionsForGender(character.gender)
   const equipment = equipmentForAppearance(character, level)
   const renderedEquipment = equipment && hasEquipmentArt(equipment.id, character.gender, level) ? equipment : undefined
@@ -157,12 +155,11 @@ function AppearanceEditor({ level, onClose }: { level: number; onClose: () => vo
           })}</div>
         </div>
         : tab === 'weapon' ? <div id="appearance-choices" className="appearance-editor__stage-outfit" role="tabpanel"><Shield size={25} aria-hidden="true" /><strong>{weapon?.label}</strong><p>{renderedEquipment ? `Входит в комплект «${renderedOutfitLabel(character, level)}».` : 'В текущем образе оружие отсутствует.'}</p><span>Чтобы сменить оружие, выберите комплект во вкладке «Комплект».</span><button type="button" className="button button--secondary" onClick={() => setTab('outfit')}>Выбрать комплект</button></div>
-        : tab === 'hair' && renderedEquipment && renderedEquipment.id !== 'casual' ? <div id="appearance-choices" className="appearance-editor__stage-outfit" role="tabpanel"><Scissors size={25} aria-hidden="true" /><strong>Причёска входит в комплект</strong><p>В комплекте «{renderedOutfitLabel(character, level)}» причёска уже нарисована вместе с образом.</p><span>Выбранная причёска сохранена для обычного образа. Чтобы изменить её, переключитесь на обычный комплект.</span><button type="button" className="button button--secondary" onClick={() => setTab('outfit')}>Выбрать комплект</button></div>
-        : <div id="appearance-choices" className="appearance-editor__choices" role="tabpanel">{options[tab].map((item) => {
+        : <div id="appearance-choices" className="appearance-editor__choices" role="tabpanel">{options.accent.map((item) => {
           const locked = item.level > level
-          const selected = character[tab] === item.id
-          return <button key={item.id} type="button" className={`appearance-editor__choice ${selected ? 'is-selected' : ''} ${locked ? 'is-locked' : ''}`} disabled={locked} aria-pressed={selected} onClick={() => setCharacter((current) => ({ ...current, [tab]: item.id }))}>
-            {tab === 'accent' ? <span className="appearance-editor__swatch" style={{ background: accentColors[item.id as CharacterAppearance['accent']] }} /> : <RewardChoiceIcon slot={tab} id={tab === 'hair' && character.gender === 'boy' && item.id === 'long' ? 'medium' : item.id} level={item.level} />}
+          const selected = character.accent === item.id
+          return <button key={item.id} type="button" className={`appearance-editor__choice ${selected ? 'is-selected' : ''} ${locked ? 'is-locked' : ''}`} disabled={locked} aria-pressed={selected} onClick={() => setCharacter((current) => ({ ...current, accent: item.id }))}>
+            <span className="appearance-editor__swatch" style={{ background: accentColors[item.id] }} />
             <span className="appearance-editor__choice-copy"><strong>{item.label}</strong>{item.detail && <small>{item.detail}</small>}</span>
             {locked ? <em><LockKeyhole size={14} /> Ур. {item.level}</em> : selected ? <Check className="appearance-editor__selected-icon" size={17} aria-hidden="true" /> : null}
           </button>
@@ -186,7 +183,7 @@ function roadmapEntries(gender: CharacterAppearance['gender']) {
   const options = characterOptionsForGender(gender)
   const entries = [
     { key: 'start', level: 1, title: 'Начало пути · Лисёнок', kind: 'Герой и питомец' },
-    ...(['hair', 'accent'] as const).flatMap((slot) => options[slot].filter((item) => item.level > 1).map((item) => ({ key: `${slot}-${item.id}`, level: item.level, title: item.label, kind: slot === 'hair' ? 'Причёска' : 'Цвет' }))),
+    ...options.accent.filter((item) => item.level > 1).map((item) => ({ key: `accent-${item.id}`, level: item.level, title: item.label, kind: 'Цвет' })),
     ...equipmentSets.filter((item) => item.level > 1).map((item) => ({ key: `equipment-${item.id}`, level: item.level, title: item.id === 'crystal' ? item.label : options.outfit.find((option) => option.id === item.outfit)?.label ?? item.label, kind: 'Комплект' })),
     ...options.pet.filter((item) => item.level > 1).map((item) => ({ key: `pet-${item.id}`, level: item.level, title: item.label, kind: 'Питомец' })),
     ...heroStages.filter((item) => item.level > 1).map((item) => ({ key: `stage-${item.id}`, level: item.level, title: heroStageForGender(item.level, gender).label, kind: 'Этап героя' })),
@@ -196,7 +193,7 @@ function roadmapEntries(gender: CharacterAppearance['gender']) {
 }
 
 function UnlockIcon({ kind }: { kind: string }) {
-  const Icon = kind === 'Причёска' ? Scissors : kind === 'Комплект' ? Shirt : kind === 'Цвет' ? Palette : kind === 'Питомец' || kind === 'Развитие питомца' ? PawPrint : Sparkles
+  const Icon = kind === 'Комплект' ? Shirt : kind === 'Цвет' ? Palette : kind === 'Питомец' || kind === 'Развитие питомца' ? PawPrint : Sparkles
   return <Icon size={18} aria-hidden="true" />
 }
 

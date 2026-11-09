@@ -66,3 +66,5 @@ html, body, #root { min-width: 0; }
   .app-shell[data-ui='golden'] .save-state { width: 100%; padding: 0; }
   .app-shell[data-ui='golden'] .g-dashboard { padding: 16px; }
 }
+.quest-reward-xp { color: var(--rpg-xp); }
+.quest-reward-gold { color: var(--rpg-reward); }

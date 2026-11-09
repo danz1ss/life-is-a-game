@@ -15,7 +15,7 @@ describe('quest card reward placement', () => {
     const footer = html.split('class="quest-card__footer"')[1]
     expect(footer).toContain('09:00 — 10:30')
     expect(footer).toContain('+25 XP')
-    expect(footer).toContain('5 монет')
+    expect(footer.replace(/<[^>]+>/g, '')).toContain('5 монет')
     expect(footer).toContain(props.skill!.name)
     expect(html).not.toContain('lucide-star')
     expect(html).toContain('g-main-label')

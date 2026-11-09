@@ -5,6 +5,7 @@ export type Difficulty = 'easy' | 'medium' | 'hard'
 export interface CharacterAppearance {
   gender: 'boy' | 'girl'
   skin: 'light' | 'medium' | 'dark'
+  /** Legacy saved selection. The hairstyle is part of the illustrated portrait. */
   hair: 'short' | 'long' | 'hood' | 'wind' | 'crown'
   outfit: 'casual' | 'traveler' | 'guardian' | 'mage' | 'ranger' | 'champion' | 'celestial'
   weapon: 'none' | 'sword' | 'shield' | 'staff' | 'bow' | 'twin' | 'crystal'
@@ -50,6 +51,10 @@ export interface Quest {
   order: number
   completedDates: string[]
   skippedDates: string[]
+  /** Dates of recurring occurrences moved into standalone quests. */
+  transferredDates?: string[]
+  /** Original date of a standalone occurrence copied from a recurring quest. */
+  transferredFrom?: string
   archivedAt: string | null
   createdAt: string
 }
@@ -153,7 +158,7 @@ export interface AppState {
   }
 }
 
-export type QuestDraft = Omit<Quest, 'id' | 'createdAt' | 'order' | 'completedDates' | 'skippedDates' | 'archivedAt'>
+export type QuestDraft = Omit<Quest, 'id' | 'createdAt' | 'order' | 'completedDates' | 'skippedDates' | 'transferredDates' | 'transferredFrom' | 'archivedAt'>
 export type SkillDraft = Omit<Skill, 'id' | 'createdAt' | 'xp' | 'position'> & {
   position?: { x: number; y: number }
 }

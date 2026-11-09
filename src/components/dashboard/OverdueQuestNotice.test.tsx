@@ -27,7 +27,7 @@ describe('overdue quest notice', () => {
   it('appears immediately after closing the planned day, without moving quests or changing rewards', () => {
     const state = createInitialState()
     const today = state.quests[0].dueDate!
-    state.quests = [{ ...state.quests[0], repeatDays: [], completedDates: [], skippedDates: [] }]
+    state.quests = [{ ...state.quests[0], repeatDays: [], completedDates: [], skippedDates: [today] }]
     const count = (value: typeof state) => value.quests.filter(q => isQuestOverdue(q, today, Boolean(q.dueDate && value.dayPlans[q.dueDate]?.closed))).length
     expect(render(count(state))).toBe('')
     const { state: closed } = closeQuestDay(state, today)

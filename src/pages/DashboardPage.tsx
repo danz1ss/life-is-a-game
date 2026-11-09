@@ -158,7 +158,27 @@ export function DashboardPage({ onNavigate, onOpenSkill }: { onNavigate: (page: 
     {questModal && <QuestModal quest={questModal === 'new' ? null : questModal} skills={state.skills} initialIsMain={newQuestAsMain} initialDate={questModalDate} showTodayHint={questModal === 'new'} onSave={saveQuest} onClose={() => setQuestModal(null)} onDelete={questModal === 'new' ? undefined : () => { store.deleteQuest(questModal.id); setQuestModal(null) }} />}
     {dialog ? <Modal title={dialogTitle} onClose={() => setDialog(null)} wide={dialog === 'weekly-plan'}><div className="g-dialog-content">
       {dialog === 'choose' ? <><p>Выберите один квест, которому сегодня уделите главное внимание.</p>{pending.map(q => <button type="button" className="g-choice" key={q.id} onClick={() => { store.setMainQuest(q.id, today); setDialog(null) }}><span>{q.title}</span>{q.isMain ? <Check size={18} aria-hidden="true" /> : <ChevronRight size={18} aria-hidden="true" />}</button>)}<div className="g-dialog-actions">{button('Создать главный квест', () => { setDialog(null); openNewQuest(true) }, true)}</div></> : null}
-      {dialog === 'review' ? <><p><strong>{completed.length} выполнено</strong> · {skipped.length} не выполнено · {pending.length} без отметки · +{earnedXp} XP</p><p>Закрытие дня отметит незавершённые повторения как «Не выполнено». Разовые задачи останутся для вашего решения. Автоматического переноса и штрафов нет.</p><ul>{pending.map(q => <li key={q.id}>{q.title}</li>)}</ul><div className="g-dialog-actions">{button('Продолжить день', () => setDialog(null))}{button('Закрыть день', () => { store.closeDay(today); setDialog(null) }, true)}{button('Закрыть и открыть план', () => { store.closeDay(today); onNavigate(overdueCount || quests.some(q => !q.repeatDays.length && !isQuestComplete(q, today)) ? 'quests' : 'tomorrow') })}</div></> : null}
+      {dialog === 'review' ? <>
+        <p><strong>{completed.length} выполнено</strong> · {skipped.length} не выполнено · {pending.length} без отметки · +{earnedXp} XP</p>
+        {pending.length > 0 ? <>
+          <p>Что сделать с делами без отметки?</p>
+          <ul className="g-day-review-list">{pending.map(q => <li key={q.id}>{q.title}</li>)}</ul>
+          <p>При отказе разовые дела попадут в архив. Расписание повторов сохранится при любом выборе.</p>
+          <div className="g-dialog-actions g-day-review-actions">
+            {button('Перенести всё на завтра', () => { store.closeDay(today, 'transfer'); setDialog(null) }, true)}
+            {button('Отказаться от всех', () => { store.closeDay(today, 'decline'); setDialog(null) })}
+            <button type="button" className="button button--tertiary" onClick={() => setDialog(null)}>Продолжить день</button>
+          </div>
+        </> : <div className="g-dialog-actions">
+          {button('Продолжить день', () => setDialog(null))}
+          {button('Закрыть день', () => { store.closeDay(today); setDialog(null) }, true)}
+          {button('Закрыть и открыть план', () => {
+            store.closeDay(today)
+            setDialog(null)
+            onNavigate(overdueCount || quests.some(q => !q.repeatDays.length && !isQuestComplete(q, today)) ? 'quests' : 'tomorrow')
+          })}
+        </div>}
+      </> : null}
       {dialog === 'weekly-review' ? <>
         {historyWeeks.length > 1 ? <label className="g-week-history">Неделя
           <select value={reviewMonday} onChange={event => setReviewWeek(event.target.value)}>

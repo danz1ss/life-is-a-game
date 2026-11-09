@@ -26,13 +26,6 @@ export const characterOptions = {
     { id: 'medium', label: 'Средняя', level: 1 },
     { id: 'dark', label: 'Тёмная', level: 1 },
   ],
-  hair: [
-    { id: 'short', label: 'Короткие', level: 1 },
-    { id: 'long', label: 'Длинные', level: 1 },
-    { id: 'hood', label: 'Капюшон', level: 3 },
-    { id: 'wind', label: 'Вихрь', level: 12 },
-    { id: 'crown', label: 'Корона', level: 50 },
-  ],
   outfit: [
     { id: 'casual', label: 'Обычная одежда', level: 1 },
     { id: 'traveler', label: 'Путник', level: 2 },
@@ -64,7 +57,7 @@ export const characterOptions = {
     { id: 'owl', label: 'Совёнок', level: 12 },
     { id: 'dragon', label: 'Дракончик', level: 100 },
   ],
-} satisfies { [K in Exclude<keyof Required<CharacterAppearance>, 'gender'>]: Array<{ id: NonNullable<CharacterAppearance[K]>; label: string; level: number }> }
+} satisfies { [K in Exclude<keyof Required<CharacterAppearance>, 'gender' | 'hair'>]: Array<{ id: NonNullable<CharacterAppearance[K]>; label: string; level: number }> }
 
 type ChoiceCopy = { label: string; detail: string }
 
@@ -72,13 +65,6 @@ type ChoiceCopy = { label: string; detail: string }
 // descriptions reflect the chosen hero, while saved IDs remain interchangeable.
 const genderedChoiceCopy = {
   boy: {
-    hair: {
-      short: { label: 'Короткая стрижка', detail: 'Аккуратные волосы для первых приключений' },
-      long: { label: 'Средняя стрижка', detail: 'Естественная стрижка для первых приключений' },
-      hood: { label: 'Капюшон искателя', detail: 'Укрывает от дождя и ветра' },
-      wind: { label: 'Взъерошенные волосы', detail: 'Новая причёска подростка' },
-      crown: { label: 'Корона героя', detail: 'Знак опыта, открывается позже' },
-    },
     outfit: {
       casual: { label: 'Куртка новичка', detail: 'Куртка, брюки и кроссовки без брони' },
       traveler: { label: 'Куртка путника', detail: 'Лёгкий дорожный наряд' },
@@ -99,13 +85,6 @@ const genderedChoiceCopy = {
     },
   },
   girl: {
-    hair: {
-      short: { label: 'Короткая стрижка', detail: 'Удобная причёска для первых приключений' },
-      long: { label: 'Длинные волосы', detail: 'Свободная причёска юной героини' },
-      hood: { label: 'Капюшон искательницы', detail: 'Укрывает от дождя и ветра' },
-      wind: { label: 'Волосы на ветру', detail: 'Новая причёска девушки-подростка' },
-      crown: { label: 'Корона героини', detail: 'Знак опыта, открывается позже' },
-    },
     outfit: {
       casual: { label: 'Туника путешественницы', detail: 'Туника, леггинсы и ботинки без брони' },
       traveler: { label: 'Куртка путешественницы', detail: 'Лёгкий дорожный наряд' },
@@ -126,7 +105,6 @@ const genderedChoiceCopy = {
     },
   },
 } satisfies Record<CharacterAppearance['gender'], {
-  hair: Record<CharacterAppearance['hair'], ChoiceCopy>
   outfit: Record<CharacterAppearance['outfit'], ChoiceCopy>
   weapon: Record<CharacterAppearance['weapon'], ChoiceCopy>
 }>
@@ -139,7 +117,6 @@ export function characterOptionsForGender(gender: CharacterAppearance['gender'])
   const copy = genderedChoiceCopy[gender]
   return {
     skin: withChoiceCopy(characterOptions.skin),
-    hair: withChoiceCopy(characterOptions.hair, copy.hair),
     outfit: withChoiceCopy(characterOptions.outfit, copy.outfit),
     weapon: withChoiceCopy(characterOptions.weapon, copy.weapon),
     accent: withChoiceCopy(characterOptions.accent),
@@ -153,7 +130,6 @@ export function availableCharacter(appearance: CharacterAppearance | undefined, 
     (characterOptions[slot] as readonly { id: string; level: number }[]).some((option) => option.id === id && option.level <= level)
   return {
     ...character,
-    hair: unlocked('hair', character.hair) ? character.hair : defaultCharacter.hair,
     outfit: unlocked('outfit', character.outfit) ? character.outfit : defaultCharacter.outfit,
     weapon: unlocked('weapon', character.weapon) ? character.weapon : defaultCharacter.weapon,
     accent: unlocked('accent', character.accent) ? character.accent : defaultCharacter.accent,
@@ -227,7 +203,7 @@ export const characterMilestones = [
   { level: 25, kind: 'hero', title: 'Молодой герой', detail: 'Новый возрастной образ и дорожное снаряжение' },
   { level: 30, kind: 'pet', title: 'Спутник-хранитель', detail: 'Четвёртая стадия питомца' },
   { level: 50, kind: 'pet', title: 'Мифический спутник', detail: 'Пятая стадия питомца' },
-  { level: 50, kind: 'hero', title: 'Взрослый герой', detail: 'Уверенный образ и корона' },
+  { level: 50, kind: 'hero', title: 'Взрослый герой', detail: 'Новый возрастной образ героя' },
   { level: 75, kind: 'hero', title: 'Опытный герой', detail: 'Зрелый образ и золотое сияние' },
   { level: 100, kind: 'pet', title: 'Дракончик', detail: 'Новый спутник и финальная стадия питомца' },
   { level: 100, kind: 'hero', title: 'Кристальный меч', detail: 'Зрелый герой получает легендарное оружие' },

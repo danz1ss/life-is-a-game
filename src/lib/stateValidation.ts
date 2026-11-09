@@ -52,6 +52,7 @@ export function assertValidState(value: unknown): asserts value is AppState {
       dueDate: nullable(date), scheduledTime: nullable(time), durationMinutes: positive,
       repeatDays: array(oneOf(0, 1, 2, 3, 4, 5, 6)), isMain: oneOf(true, false), order: number,
       completedDates: array(date), skippedDates: array(date), archivedAt: nullable(timestamp), createdAt: timestamp,
+      transferredDates: optional(array(date)), transferredFrom: optional(date),
     }),
     goals: entities({
       skillId: id, title: string, purpose: string, successCriteria: string, targetDate: nullable(date),

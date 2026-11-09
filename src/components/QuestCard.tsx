@@ -2,7 +2,7 @@ import { Check, Clock3, Coins, GripVertical, Star, Target, X, Zap } from 'lucide
 import { QuestActions } from './QuestActions'
 import { SkillIcon } from './SkillIcon'
 import type { DragEvent, ReactNode } from 'react'
-import { difficultyConfig, formatDuration, isQuestComplete, isQuestSkipped } from '../lib/game'
+import { dateLabel, difficultyConfig, formatDuration, isQuestComplete, isQuestSkipped } from '../lib/game'
 import type { Quest, Skill } from '../lib/types'
 
 export function QuestCard({ quest, skill, goalTitle, date, onToggle, onSkip, onEdit, onDelete, onMakeMain, onReorder, compact = false, showResultActions = true, showScheduledTime = true, rewardsInFooter = false, badge, footer, warning }: {
@@ -53,24 +53,30 @@ export function QuestCard({ quest, skill, goalTitle, date, onToggle, onSkip, onE
       <div className="quest-card__body">
         <div className="quest-card__topline">
           <h3>{quest.title}</h3>
+          {quest.transferredFrom && <span className="quest-status quest-status--muted">Перенос с {dateLabel(quest.transferredFrom)}</span>}
           {quest.isMain && !rewardsInFooter && <span className="main-badge"><Star size={11} fill="currentColor" /> Главный</span>}
         </div>
         {quest.description && <p className={compact ? 'quest-description--compact' : ''}>{quest.description}</p>}
         {!rewardsInFooter && <div className="quest-meta">
-          {badge && <span className={`quest-status quest-status--${badge.tone}`}>{badge.label}</span>}
           {showScheduledTime && quest.scheduledTime && <span><Clock3 size={13} /> {quest.scheduledTime}</span>}
           <span><Clock3 size={13} /> {formatDuration(quest.durationMinutes)}</span>
           {skill && <span className="skill-pill" data-skill-id={skill.id} style={{ color: skill.color }}><SkillIcon icon={skill.icon} size={14} />{skill.name}</span>}
+          {badge && <span className={`quest-status quest-status--${badge.tone}`}>{badge.label}</span>}
           {goalTitle && <span className="goal-pill"><Target size={12} />{goalTitle}</span>}
-          {!rewardsInFooter && <><span><Zap size={13} /> {reward.xp} XP</span><span><Coins size={13} /> {reward.gold}</span></>}
+          <span className="quest-reward-xp"><Zap size={13} /> {reward.xp} XP</span>
+          <span className="quest-reward-gold"><Coins size={13} /> {reward.gold}</span>
         </div>}
         {(footer || rewardsInFooter) && <div className="quest-card__footer">
+          {footer}
           {rewardsInFooter && <>
-            {skill && <span className="skill-pill g-quest-skill" data-skill-id={skill.id} style={{ color: skill.color }}><SkillIcon icon={skill.icon} size={14} />{skill.name}</span>}
+            {skill && <span className="skill-pill g-quest-skill" data-skill-id={skill.id} style={{ color: skill.color }}><SkillIcon icon={skill.icon} size={14} /><span title={skill.name}>{skill.name}</span></span>}
             {badge && <span className={`quest-status quest-status--${badge.tone}`}>{badge.label}</span>}
             {goalTitle && <span className="goal-pill"><Target size={12} />{goalTitle}</span>}
           </>}
-          {footer}{rewardsInFooter && <div className="g-quest-rewards"><span><Zap size={13} aria-hidden="true" />+{reward.xp} XP</span><span aria-hidden="true">·</span><span><Coins size={13} aria-hidden="true" />{reward.gold} монет</span></div>}
+          {rewardsInFooter && <div className="g-quest-rewards">
+            <span className="quest-reward-xp"><Zap size={13} aria-hidden="true" />+{reward.xp} XP</span>
+            <span className="quest-reward-gold"><Coins size={13} aria-hidden="true" /><span>{reward.gold} <span className="g-quest-gold-unit">{reward.gold === 2 ? 'монеты' : 'монет'}</span></span></span>
+          </div>}
         </div>}
         {warning}
       </div>

@@ -37,7 +37,8 @@ module.exports = async ({ scenario, window, evaluate, waitFor, navigate }) => {
   const open = async () => {
     await evaluate("document.querySelector('.progress-hero__actions button').click()")
     await waitFor("Boolean(document.querySelector('.appearance-editor'))")
-    await evaluate("[...document.querySelectorAll('.appearance-editor__tabs button')].find(b=>b.textContent==='Комплект').click()")
+    assert.deepEqual(await evaluate("[...document.querySelectorAll('.appearance-editor__tabs button')].map(b => b.textContent)"), ['Комплект', 'Оружие', 'Цвет'])
+    assert.equal(await evaluate("document.querySelector('.appearance-editor__tabs [aria-selected=true]').textContent"), 'Комплект')
     await waitFor("Boolean(document.querySelector('[data-equipment-id=guardian]'))")
   }
   const close = async save => {
@@ -79,13 +80,14 @@ module.exports = async ({ scenario, window, evaluate, waitFor, navigate }) => {
     fs.writeFileSync(path.join(process.env.LIFE_GAME_SCREENSHOTS, `${name}.png`), image.toPNG())
   }
   // Unrelated edits must keep even legacy choices whose old unlock is higher.
-  await seed('boy', 4, { outfit: 'celestial', weapon: 'crystal', hair: 'crown', accent: 'gold', pet: 'dragon' })
+  await seed('boy', 4, { outfit: 'celestial', weapon: 'crystal', hair: 'hood', accent: 'gold', pet: 'dragon' })
   await open(); await close(true)
   let state = await evaluate('window.lifeGame.loadState()')
   assert.deepEqual([state.profile.character.outfit, state.profile.character.weapon], ['celestial', 'crystal'])
-  assert.deepEqual([state.profile.character.hair, state.profile.character.accent, state.profile.character.pet], ['crown', 'gold', 'dragon'], 'Saving an imported profile must keep unrelated locked choices')
+  assert.deepEqual([state.profile.character.hair, state.profile.character.accent, state.profile.character.pet], ['hood', 'gold', 'dragon'], 'Saving an imported profile must keep legacy choices compatible')
   assert.match(await art('.progress-hero'), /boy-child.png$/)
   await open()
+  await screenshot('equipment-legacy-hood', true)
   assert.equal(await evaluate("document.querySelector('[data-equipment-id=crystal]').disabled"), true)
   assert.equal(await evaluate("document.querySelector('[data-equipment-id=mage]').disabled"), true)
   await choose('guardian')

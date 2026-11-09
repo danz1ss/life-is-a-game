@@ -18,6 +18,7 @@ describe('dashboard unresolved quests', () => {
 
   it('shows a prominent notice immediately after closing a day with an unfinished quest', () => {
     expect(render()).not.toContain('Разобрать квесты')
+    state.quests[0].skippedDates = [today]
     state = closeQuestDay(state, today).state
     expect(render()).toContain('1 квест требует решения')
     expect(render()).toContain('Разобрать квесты')

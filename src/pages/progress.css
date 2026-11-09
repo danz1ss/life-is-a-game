@@ -349,15 +349,12 @@
 }
 .appearance-editor__choice:hover:not(:disabled) { border-color: var(--border-strong); background: var(--surface-hover); }
 .appearance-editor__choice.is-selected { border-color: var(--accent); background: var(--accent-soft); }
-.appearance-editor__choice.is-selected .reward-choice-icon { border-color: var(--accent-hover); }
 .appearance-editor__choice.is-locked {
   border-color: var(--border);
   color: var(--text-secondary);
   background: var(--surface-1);
   cursor: not-allowed;
 }
-.appearance-editor__choice.is-locked .reward-choice-icon { opacity: .65; filter: grayscale(.25); }
-.appearance-editor__choice .reward-choice-icon,
 .appearance-editor__swatch { flex: 0 0 34px; width: 34px; height: 34px; }
 .appearance-editor__swatch { border: 1px solid var(--border-strong); border-radius: 50%; }
 .appearance-editor__choice-copy { flex: 1; min-width: 0; }

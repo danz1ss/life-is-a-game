@@ -6,6 +6,17 @@ import { CharacterPortrait } from './CharacterPortrait'
 import { heroArtFile } from '../lib/characterVisual'
 
 describe('full-body hero art', () => {
+  it('renders old hairstyle selections exactly like the illustrated default', () => {
+    for (const gender of ['boy', 'girl'] as const) {
+      const appearance = { ...defaultCharacter, gender }
+      const render = (hair: typeof appearance.hair) => renderToStaticMarkup(
+        createElement(CharacterPortrait, { appearance: { ...appearance, hair }, level: 50 }),
+      )
+      for (const hair of ['long', 'hood', 'wind', 'crown'] as const) {
+        expect(render(hair)).toBe(render('short'))
+      }
+    }
+  })
   it('never draws floating weapons over an existing portrait', () => {
     for (const weapon of ['shield', 'sword', 'staff', 'bow', 'twin'] as const) {
       const portrait = renderToStaticMarkup(createElement(CharacterPortrait, {

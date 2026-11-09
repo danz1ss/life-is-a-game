@@ -10,7 +10,7 @@ import { toggleQuestCompletion, toggleQuestSkipped } from './questCompletion'
 import { assignMainQuest, patchPlannedQuest, reorderDayQuest, rescheduleOneTimeQuest } from './planning'
 import { awardNewLevels, claimLevelReward } from './levelRewards'
 import { useToday } from './useToday'
-import { closeQuestDay } from './dayReview'
+import { closeQuestDay, type DayReviewDecision } from './dayReview'
 import { isWeekMonday, removeWeeklyTask, replaceWeeklyPlan, restoreWeeklyTask, reviewWeeklyPlan, toggleWeeklyTaskCompletion, upsertWeeklyTask, weeklyPlanError, weeklyTaskLimit } from './weeklyPlanning'
 
 interface StoreValue {
@@ -30,7 +30,7 @@ interface StoreValue {
   restoreQuest: (id: string) => void
   toggleQuest: (id: string, onDate?: string) => void
   skipQuest: (id: string, onDate?: string) => void
-  closeDay: (onDate?: string) => void
+  closeDay: (onDate?: string, action?: DayReviewDecision['kind']) => void
   reorderQuest: (sourceId: string, targetId: string, placement: 'before' | 'after', onDate?: string) => void
   setMainQuest: (id: string, onDate?: string) => void
   saveWeeklyTask: (week: string, title: string, id?: string) => void
@@ -66,6 +66,13 @@ interface StoreValue {
 }
 
 const StoreContext = createContext<StoreValue | null>(null)
+const demoMode = import.meta.env.DEV && typeof window !== 'undefined' && !window.lifeGame
+  && new URLSearchParams(window.location.search).has('demo')
+const browserStorageKey = demoMode ? `life-is-a-game-demo-${dateKey()}` : 'life-is-a-game-state'
+
+function browserStorage() {
+  return demoMode ? sessionStorage : localStorage
+}
 
 function uuid() {
   return crypto.randomUUID()
@@ -73,7 +80,7 @@ function uuid() {
 
 async function loadPersistedState() {
   if (window.lifeGame) return window.lifeGame.loadState()
-  const raw = localStorage.getItem('life-is-a-game-state')
+  const raw = browserStorage().getItem(browserStorageKey)
   if (raw === null) return null
   const stored: unknown = JSON.parse(raw)
   if (stored === null) throw new Error('Некорректный файл сохранения')
@@ -82,7 +89,7 @@ async function loadPersistedState() {
 
 async function persistState(state: AppState) {
   if (window.lifeGame) return window.lifeGame.saveState(state)
-  localStorage.setItem('life-is-a-game-state', JSON.stringify(state))
+  browserStorage().setItem(browserStorageKey, JSON.stringify(state))
   return true
 }
 
@@ -109,9 +116,11 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     let active = true
     setLoadError(null)
     loadPersistedState()
-      .then((stored) => {
+      .then(async (stored) => {
+        const next = stored === null
+          ? demoMode ? (await import('./demoState')).createDemoState() : createInitialState()
+          : migrateState(stored)
         if (!active) return
-        const next = stored === null ? createInitialState() : migrateState(stored)
         setState(next)
         setSaveStatus('saved')
       })
@@ -143,7 +152,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     const saveOnPageHide = () => {
       // localStorage writes synchronously; an unloading browser cannot await a promise.
       if (state && !window.lifeGame) {
-        try { localStorage.setItem('life-is-a-game-state', JSON.stringify(state)) } catch { /* The save indicator reports storage failures. */ }
+        try { browserStorage().setItem(browserStorageKey, JSON.stringify(state)) } catch { /* The save indicator reports storage failures. */ }
       }
     }
     window.addEventListener('pagehide', saveOnPageHide)
@@ -231,14 +240,11 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       setToast(isQuestSkipped(quest, onDate) ? 'Квест снова ожидает отметки' : 'Не выполнено · не печалься, всё будет хорошо')
     }
 
-    const closeDay = (onDate = dateKey()) => {
-      const review = closeQuestDay(state, onDate)
-      setState((current) => current && closeQuestDay(current, onDate).state)
-      if (review.unresolved + review.skippedRepeats === 0) {
-        setToast('День закрыт · все квесты разобраны')
-        return
-      }
-      setToast(`День закрыт · требуют решения: ${review.unresolved} · пропущено повторов: ${review.skippedRepeats}`)
+    const closeDay = (onDate = dateKey(), action?: DayReviewDecision['kind']) => {
+      const decision: DayReviewDecision | undefined = action === 'transfer' ? { kind: action, batchId: uuid() }
+        : action === 'decline' ? { kind: action, at: new Date().toISOString() } : undefined
+      setState((current) => current && closeQuestDay(current, onDate, decision).state)
+      setToast(action === 'transfer' ? 'День закрыт · дела перенесены на завтра' : 'День закрыт')
     }
 
     const reorderQuest = (sourceId: string, targetId: string, placement: 'before' | 'after', onDate = dateKey()) => {

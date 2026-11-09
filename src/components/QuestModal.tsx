@@ -25,6 +25,11 @@ export function QuestModal({ quest, skills, initialIsMain = false, initialDate, 
   const [dueDate, setDueDate] = useState(dateKey())
   const [scheduledTime, setScheduledTime] = useState('')
   const [durationMinutes, setDurationMinutes] = useState(30)
+  const durationOptions = [10, 15, 20, 30, 45, 60, 90, 120, 180, 300]
+  if (quest && !durationOptions.includes(quest.durationMinutes)) {
+    durationOptions.push(quest.durationMinutes)
+    durationOptions.sort((a, b) => a - b)
+  }
   const [repeatDays, setRepeatDays] = useState<number[]>([])
   const [isMain, setIsMain] = useState(false)
   const mainDate = repeatDays.length ? openingDate : dueDate
@@ -94,7 +99,7 @@ export function QuestModal({ quest, skills, initialIsMain = false, initialDate, 
         <label className="field">
           <span><Clock3 size={15} /> Продолжительность</span>
           <select value={durationMinutes} onChange={(event) => setDurationMinutes(Number(event.target.value))}>
-            {[10, 15, 20, 30, 45, 60, 90, 120, 180].map((minutes) => <option key={minutes} value={minutes}>{formatDuration(minutes)}</option>)}
+            {durationOptions.map((minutes) => <option key={minutes} value={minutes}>{formatDuration(minutes)}</option>)}
           </select>
         </label>
 
