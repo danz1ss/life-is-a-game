@@ -14,9 +14,9 @@ describe('level milestones without coin rewards', () => {
     state.profile.gold = 18
     state.levelRewards = { highestLevel: 5, acknowledgedLevel: 4, personal: [{ id: 'book', title: 'Книга', level: 5, claimedAt: null }] }
     vi.mocked(useStore).mockReturnValue({ state, acknowledgeLevelRewards: () => undefined } as unknown as ReturnType<typeof useStore>)
-    const markup = renderToStaticMarkup(createElement(LevelUpModal))
+    const markup = renderToStaticMarkup(createElement(LevelUpModal, { onTryEquipment: () => {} }))
     expect(markup).toContain('Новый уровень: 5!')
-    expect(markup).toContain('Новые образы и этапы')
+    expect(markup).toContain('Новые открытия')
     expect(markup).toContain('Открылись личные поощрения')
     expect(markup).toContain('Книга')
     expect(markup).not.toContain('level-up__gold')

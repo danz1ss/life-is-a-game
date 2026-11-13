@@ -28,6 +28,7 @@ export function App() {
   const [appearanceOpen, setAppearanceOpen] = useState(false)
   const [dataOpen, setDataOpen] = useState(false)
   const [plannerFocus, setPlannerFocus] = useState(0)
+  const [tryEquipment, setTryEquipment] = useState(0)
   const mainContent = useRef<HTMLElement>(null)
   const closeAppearance = useCallback(() => setAppearanceOpen(false), [])
   const { state, saveStatus, toast, dismissToast, deletedQuest, undoDeleteQuest, dismissDeletedQuests, setBackground } = useStore()
@@ -77,12 +78,12 @@ export function App() {
           {page === 'today' && <DashboardPage onNavigate={navigate} onOpenSkill={openSkill} />}
           {page === 'quests' && <QuestsPage onNavigate={navigate} focusTomorrow={plannerFocus} />}
           {page === 'tree' && <TreePage initialSelectedId={treeFocusSkillId} />}
-          {page === 'progress' && <ProgressPage />}
+          {page === 'progress' && <ProgressPage tryEquipment={tryEquipment} onEquipmentOpened={() => setTryEquipment(0)} />}
         </Suspense>
       </main>
       {appearanceOpen && <AppearanceModal selected={state.preferences.background} onChange={setBackground} onClose={closeAppearance} />}
       {dataOpen && <DataModal onClose={() => setDataOpen(false)} />}
-      <LevelUpModal />
+      <LevelUpModal onTryEquipment={() => { setPage('progress'); setTryEquipment(1) }} />
       {toast && state.levelRewards.highestLevel <= state.levelRewards.acknowledgedLevel && <div className="game-toast" role="status"><span>✦</span><strong>{toast}</strong></div>}
       {deletedQuest && <div className={`delete-toast ${toast ? 'delete-toast--raised' : ''}`}>
         <Trash2 size={18} />

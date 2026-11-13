@@ -1,6 +1,6 @@
 import { availableCharacter, heroStageForLevel, petStageForLevel, petStages } from './character'
 import type { CharacterAppearance } from './types'
-import { equipmentArtFile, equipmentForAppearance, hasEquipmentArt } from './heroEquipment'
+import { equipmentArtFile, equipmentForAppearance, heroEquipmentPortrait, hasEquipmentArt } from './heroEquipment'
 export { stageOutfits, stageOutfitLabel } from './heroEquipment'
 
 type Species = NonNullable<CharacterAppearance['pet']>
@@ -13,10 +13,13 @@ export const companionArt: Record<Species, readonly string[]> = {
 export function heroArtFile(appearance: CharacterAppearance | undefined, level: number) {
   const character = availableCharacter(appearance, level)
   const stage = heroStageForLevel(level)
+  const portrait = heroEquipmentPortrait(character, level)
+  if (portrait) return portrait
   const set = equipmentForAppearance(character, level)
   if (set && hasEquipmentArt(set.id, character.gender, level)) return equipmentArtFile(set.id, character.gender, level)
   const crystal = stage.id === 'legend' && character.weapon === 'crystal'
-  return `heroes/${character.gender}-${stage.id}${crystal ? '-crystal' : ''}.png`
+  return heroEquipmentPortrait({ ...character, weapon: 'none' }, level)
+    ?? `heroes/${character.gender}-${stage.id}${crystal ? '-crystal' : ''}.png`
 }
 
 export function companionArtFile(species: Species, level: number) {

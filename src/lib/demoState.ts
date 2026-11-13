@@ -1,5 +1,15 @@
-import { createInitialState, dateKey, nextDateKey } from './game'
-import type { Quest } from './types'
+import { createInitialState, dateKey, levelProgress, nextDateKey } from './game'
+import type { AppState, Quest } from './types'
+
+export function unlockDemoProgress(state: AppState) {
+  const totalXp = Math.max(state.profile.totalXp, 179_685)
+  const level = Math.max(state.levelRewards.highestLevel, levelProgress(totalXp).level)
+  return {
+    ...state,
+    profile: { ...state.profile, totalXp },
+    levelRewards: { ...state.levelRewards, highestLevel: level, acknowledgedLevel: level },
+  }
+}
 
 export function createDemoState() {
   const state = createInitialState()

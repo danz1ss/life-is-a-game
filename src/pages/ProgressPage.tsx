@@ -1,24 +1,25 @@
-import { Check, ChevronDown, ChevronRight, Coins, LockKeyhole, Palette, PawPrint, Pencil, Plus, Shield, Shirt, Sparkles, Trash2 } from 'lucide-react'
+import { Check, ChevronRight, Coins, LockKeyhole, PawPrint, Pencil, Plus, Shield, Shirt, Sparkles, Trash2 } from 'lucide-react'
 import { useEffect, useState } from 'react'
+import { CompanionPortrait } from '../components/CompanionPortrait'
+import { CharacterPortrait } from '../components/CharacterPortrait'
 import { CharacterStage } from '../components/CharacterStage'
 import { LevelRewardsPanel } from '../components/LevelRewards'
 import { RewardModal } from '../components/RewardModal'
 import { Modal, PageHeader, ProgressBar } from '../components/Ui'
-import { accentColors, availableCharacter, characterOptionsForGender, genderOptions, heroStageForGender, heroStages, normalizeCharacter, petStageForLevel, petStages, skinColors } from '../lib/character'
+import { availableCharacter, characterOptionsForGender, genderOptions, heroStageForGender, heroStages, normalizeCharacter, petStageForLevel, petStages, skinColors } from '../lib/character'
 import { levelProgress } from '../lib/game'
-import { equipmentArtFile, equipmentForAppearance, equipmentSets, hasEquipmentArt, renderedOutfitLabel, selectEquipment } from '../lib/heroEquipment'
+import { exactHeroArt, equipmentArtFile, equipmentForAppearance, equipmentSets, heroEquipmentPortrait, renderedOutfitLabel, tryHeroEquipment } from '../lib/heroEquipment'
 import { useStore } from '../lib/store'
 import type { CharacterAppearance, Reward, RewardDraft } from '../lib/types'
 import './progress.css'
 
 const tabs = [
-  { slot: 'outfit', label: 'Комплект' },
+  { slot: 'outfit', label: 'Образ' },
   { slot: 'weapon', label: 'Оружие' },
-  { slot: 'accent', label: 'Цвет' },
 ] as const
 type Slot = (typeof tabs)[number]['slot']
 
-export function ProgressPage() {
+export function ProgressPage({ tryEquipment, onEquipmentOpened }: { tryEquipment: number; onEquipmentOpened: () => void }) {
   const { state, addReward, updateReward, deleteReward, redeemReward, usePurchasedReward } = useStore()
   const progress = levelProgress(state.profile.totalXp)
   const level = Math.max(state.levelRewards.highestLevel, progress.level)
@@ -26,14 +27,20 @@ export function ProgressPage() {
   const options = characterOptionsForGender(character.gender)
   const stage = heroStageForGender(level, character.gender)
   const equipment = equipmentForAppearance(character, level)
-  const renderedWeapon = equipment && hasEquipmentArt(equipment.id, character.gender, level) ? equipment.weapon : 'none'
+  const renderedWeapon = heroEquipmentPortrait(character, level) ? character.weapon : equipment?.weapon ?? 'none'
   const future = roadmapEntries(character.gender).filter((entry) => entry.level > level)
   const nextLevels = [...new Set(future.map((entry) => entry.level))].slice(0, 3)
-  const [appearanceOpen, setAppearanceOpen] = useState(false)
+  const [settings, setSettings] = useState<'hero' | 'pet' | null>(null)
   const [roadmapOpen, setRoadmapOpen] = useState(false)
   const [rewardModal, setRewardModal] = useState<Reward | 'new' | null>(null)
   const [purchase, setPurchase] = useState<Reward | null>(null)
   const [message, setMessage] = useState('')
+
+  useEffect(() => {
+    if (!tryEquipment) return
+    setSettings('hero')
+    onEquipmentOpened()
+  }, [tryEquipment, onEquipmentOpened])
 
   useEffect(() => {
     if (!message) return
@@ -84,7 +91,7 @@ export function ProgressPage() {
           <p className="progress-hero__rank"><span className="progress-rank">{stage.label}</span></p>
           <div className="progress-hero__group"><h4><Shirt size={16} aria-hidden="true" />Экипировка</h4><span>{renderedOutfitLabel(character, level)}</span><span>{options.weapon.find((item) => item.id === renderedWeapon)?.label}</span></div>
           <div className="progress-hero__group progress-hero__pet"><h4><PawPrint size={16} aria-hidden="true" />Питомец · {petStageForLevel(level).label}</h4><span>{state.profile.petName?.trim() || 'Искра'} · {options.pet.find((item) => item.id === character.pet)?.label}</span></div>
-          <div className="progress-hero__actions"><button className="button button--primary" onClick={() => setAppearanceOpen(true)}>Изменить образ</button><button className="button button--secondary" onClick={() => setRoadmapOpen(true)}>Весь путь развития <ChevronRight size={16} /></button></div>
+          <div className="progress-hero__actions"><button className="button button--primary" aria-haspopup="dialog" onClick={() => setSettings('hero')}>Настроить героя</button><button className="button button--secondary" aria-haspopup="dialog" onClick={() => setSettings('pet')}>Настроить питомца</button></div>
         </div>
       </div>
     </section>
@@ -98,7 +105,8 @@ export function ProgressPage() {
       })}</div> : <div className="panel progress-empty">Добавьте первую награду, на которую захотите потратить монеты.</div>}
     </section>
     {inventory.length > 0 && <section className="progress-inventory" aria-labelledby="progress-inventory-title"><div className="progress-section-heading"><div><h2 id="progress-inventory-title">Мои награды</h2><p>Куплены и ждут подходящего момента.</p></div></div><div className="progress-inventory__list">{inventory.map((item) => <div className="panel progress-inventory__item" key={item.key}><span className="progress-inventory__icon" aria-hidden="true">{item.icon}</span><strong>{item.title} ×{item.ids.length}</strong><button className="button button--secondary" onClick={() => usePurchasedReward(item.ids[0])}><Check size={16} /> Использовать</button></div>)}</div></section>}
-    {appearanceOpen && <AppearanceEditor level={level} onClose={() => setAppearanceOpen(false)} />}
+    {settings === 'hero' && <AppearanceEditor level={level} onClose={() => setSettings(null)} />}
+    {settings === 'pet' && <PetEditor level={level} onClose={() => setSettings(null)} />}
     {roadmapOpen && <Roadmap level={level} gender={character.gender} onClose={() => setRoadmapOpen(false)} />}
     {rewardModal && <RewardModal reward={rewardModal === 'new' ? null : rewardModal} onSave={saveReward} onClose={() => setRewardModal(null)} />}
     {purchase && <Modal title={`Использовать ${purchase.cost} монет?`} subtitle={`Купить «${purchase.title}»`} onClose={() => setPurchase(null)}><div className="progress-confirm"><p>После покупки {purchase.useImmediately ? 'награда будет использована сразу.' : 'награда появится в разделе «Мои награды».'}</p><div className="form-actions"><button className="button button--ghost" onClick={() => setPurchase(null)}>Отмена</button><button className="button button--primary" onClick={buyReward}>Купить за {purchase.cost} 🪙</button></div></div></Modal>}
@@ -109,72 +117,105 @@ export function ProgressPage() {
 function AppearanceEditor({ level, onClose }: { level: number; onClose: () => void }) {
   const { state, updateProfile } = useStore()
   const [name, setName] = useState(state.profile.name)
-  const [petName, setPetName] = useState(state.profile.petName ?? 'Искра')
   const [character, setCharacter] = useState(() => normalizeCharacter(state.profile.character))
-  const [equipmentChanged, setEquipmentChanged] = useState(false)
   const [tab, setTab] = useState<Slot>('outfit')
   const options = characterOptionsForGender(character.gender)
-  const equipment = equipmentForAppearance(character, level)
-  const renderedEquipment = equipment && hasEquipmentArt(equipment.id, character.gender, level) ? equipment : undefined
-  const weapon = options.weapon.find((item) => item.id === (renderedEquipment?.weapon ?? 'none'))
+  const available = availableCharacter(character, level)
+  const current = !heroEquipmentPortrait(available, level) && available.weapon !== 'crystal'
+    ? { ...available, weapon: 'none' as const }
+    : available
   const save = () => {
-    const selected = normalizeCharacter(character)
-    // Keep legacy pairs intact until the user explicitly chooses a complete set.
-    if (!equipmentChanged) {
-      selected.outfit = state.profile.character?.outfit ?? selected.outfit
-      selected.weapon = state.profile.character?.weapon ?? selected.weapon
-    }
-    updateProfile({ name: name.trim() || 'Игрок', petName: petName.trim() || 'Искра', character: selected })
+    updateProfile({ name: name.trim() || 'Игрок', character })
     onClose()
   }
-  return <Modal title="Изменить образ" subtitle="Настройте внешний вид героя" onClose={onClose} wide>
+  return <Modal title="Настройки героя" onClose={onClose} wide>
     <div className="appearance-editor">
-      <div className="appearance-editor__preview"><CharacterStage appearance={character} level={level} /></div>
+      <div className="appearance-editor__preview"><CharacterPortrait appearance={character} level={level} /></div>
       <div className="appearance-editor__controls">
-        <div className="appearance-editor__tabs" role="tablist" aria-label="Элементы образа">{tabs.map((item) =>
-          <button type="button" role="tab" aria-selected={tab === item.slot} aria-controls="appearance-choices" className={tab === item.slot ? 'is-active' : ''} key={item.slot} onClick={() => setTab(item.slot)}>{item.label}</button>
-        )}</div>
-        {tab === 'outfit' ? <div id="appearance-choices" className="appearance-editor__equipment" role="tabpanel">
-          <p className="appearance-editor__equipment-note">Одежда и оружие выбираются одним комплектом.</p>
-          <div className="appearance-editor__choices appearance-editor__equipment-choices">{equipmentSets.map((item) => {
-            const locked = item.level > level
-            const artLevel = item.id === 'crystal' ? Math.max(level, item.level) : level
-            const ready = hasEquipmentArt(item.id, character.gender, artLevel)
-            const selected = renderedEquipment?.id === item.id
-            const outfitLabel = item.id === 'casual'
-              ? renderedOutfitLabel({ ...character, outfit: item.outfit, weapon: item.weapon }, level)
-              : options.outfit.find((option) => option.id === item.outfit)?.label ?? item.label
-            return <button key={item.id} data-equipment-id={item.id} type="button" className={`appearance-editor__choice appearance-editor__equipment-choice ${selected ? 'is-selected' : ''} ${locked || !ready ? 'is-locked' : ''}`} disabled={locked || !ready} aria-pressed={selected} onClick={() => {
-              setCharacter((current) => selectEquipment(current, item.id, level))
-              setEquipmentChanged(true)
-            }}>
-              <span className="appearance-editor__equipment-thumbnail" aria-hidden="true">{ready ? <img src={`${import.meta.env.BASE_URL}${equipmentArtFile(item.id, character.gender, artLevel)}`} alt="" /> : <Shirt size={24} />}</span>
-              <span className="appearance-editor__choice-copy"><strong>{item.id === 'crystal' ? item.label : outfitLabel}</strong><small>{item.detail}</small>{!ready && <small>Образ пока недоступен</small>}</span>
-              {locked ? <em><LockKeyhole size={14} /> Ур. {item.level}</em> : selected ? <Check className="appearance-editor__selected-icon" size={17} aria-hidden="true" /> : null}
-            </button>
-          })}</div>
-        </div>
-        : tab === 'weapon' ? <div id="appearance-choices" className="appearance-editor__stage-outfit" role="tabpanel"><Shield size={25} aria-hidden="true" /><strong>{weapon?.label}</strong><p>{renderedEquipment ? `Входит в комплект «${renderedOutfitLabel(character, level)}».` : 'В текущем образе оружие отсутствует.'}</p><span>Чтобы сменить оружие, выберите комплект во вкладке «Комплект».</span><button type="button" className="button button--secondary" onClick={() => setTab('outfit')}>Выбрать комплект</button></div>
-        : <div id="appearance-choices" className="appearance-editor__choices" role="tabpanel">{options.accent.map((item) => {
-          const locked = item.level > level
-          const selected = character.accent === item.id
-          return <button key={item.id} type="button" className={`appearance-editor__choice ${selected ? 'is-selected' : ''} ${locked ? 'is-locked' : ''}`} disabled={locked} aria-pressed={selected} onClick={() => setCharacter((current) => ({ ...current, accent: item.id }))}>
-            <span className="appearance-editor__swatch" style={{ background: accentColors[item.id] }} />
-            <span className="appearance-editor__choice-copy"><strong>{item.label}</strong>{item.detail && <small>{item.detail}</small>}</span>
-            {locked ? <em><LockKeyhole size={14} /> Ур. {item.level}</em> : selected ? <Check className="appearance-editor__selected-icon" size={17} aria-hidden="true" /> : null}
-          </button>
-        })}</div>}
-      </div>
-      <details className="appearance-editor__identity"><summary><span>Настройки героя и питомца<small>Имя, внешность и спутник</small></span><ChevronDown size={17} aria-hidden="true" /></summary>
         <div className="appearance-editor__identity-grid">
           <label className="field"><span>Имя героя</span><input maxLength={40} value={name} onChange={(event) => setName(event.target.value)} /></label>
-          <label className="field"><span>Имя питомца</span><input maxLength={32} value={petName} onChange={(event) => setPetName(event.target.value)} /></label>
           <fieldset className="field"><legend>Герой</legend><div className="appearance-editor__small-options">{genderOptions.map((item) => <button type="button" className={character.gender === item.id ? 'is-selected' : ''} key={item.id} onClick={() => setCharacter((current) => ({ ...current, gender: item.id }))}>{item.label}</button>)}</div></fieldset>
           <fieldset className="field"><legend>Оттенок кожи</legend><div className="appearance-editor__small-options">{options.skin.map((item) => <button type="button" className={character.skin === item.id ? 'is-selected' : ''} key={item.id} onClick={() => setCharacter((current) => ({ ...current, skin: item.id }))}><i style={{ background: skinColors[item.id] }} />{item.label}</button>)}</div></fieldset>
-          <fieldset className="field field--full"><legend>Питомец</legend><div className="appearance-editor__small-options">{options.pet.map((item) => <button type="button" className={character.pet === item.id ? 'is-selected' : ''} disabled={item.level > level} key={item.id} onClick={() => setCharacter((current) => ({ ...current, pet: item.id }))}>{item.label}{item.level > level && ` · Ур. ${item.level}`}</button>)}</div></fieldset>
         </div>
-      </details>
-      <div className="appearance-editor__footer"><button className="button button--secondary" onClick={onClose}>Отмена</button><button className="button button--primary" onClick={save}>Сохранить образ</button></div>
+        <div className="appearance-editor__tabs" role="group" aria-label="Элементы образа">{tabs.map((item) =>
+          <button type="button" aria-pressed={tab === item.slot} aria-controls="appearance-choices" className={tab === item.slot ? 'is-active' : ''} key={item.slot} onClick={() => setTab(item.slot)}>{item.label}</button>
+        )}</div>
+        <div id="appearance-choices" className="appearance-editor__choices appearance-editor__equipment-choices" role="group" aria-label={tab === 'outfit' ? 'Выбор образа' : 'Выбор оружия'}>
+          {options[tab].map((item) => {
+            const change = tab === 'outfit'
+              ? { outfit: item.id as CharacterAppearance['outfit'] }
+              : { weapon: item.id as CharacterAppearance['weapon'] }
+            const locked = item.level > level
+            const selected = current[tab] === item.id
+            const next = tryHeroEquipment(current, change, level)
+            const thumbnailLevel = Math.max(level, item.level)
+            const preset = equipmentSets.find(set => set[tab] === item.id)
+            const outfitArt = exactHeroArt({ ...current, ...change, weapon: 'none' }, thumbnailLevel)
+              ?? heroEquipmentPortrait({ ...current, ...change, weapon: 'none' }, thumbnailLevel)
+              ?? (preset && equipmentArtFile(preset.id, character.gender, thumbnailLevel))
+            const thumbnail = tab === 'outfit'
+              ? outfitArt && `${import.meta.env.BASE_URL}${outfitArt}`
+              : change.weapon && change.weapon !== 'none'
+                ? `${import.meta.env.BASE_URL}heroes/weapons/${change.weapon === 'twin' ? 'sword' : change.weapon}.webp`
+                : undefined
+            const label = item.id === 'casual' ? renderedOutfitLabel({ ...current, outfit: 'casual', weapon: 'none' }, level) : item.label
+            return <button key={item.id} data-equipment-id={item.id} type="button" className={`appearance-editor__choice appearance-editor__equipment-choice ${selected ? 'is-selected' : ''} ${locked || !next ? 'is-locked' : ''}`} disabled={locked || !next} aria-pressed={selected} onClick={() => next && setCharacter(next)}>
+              <span className="appearance-editor__equipment-thumbnail" aria-hidden="true">
+                {thumbnail ? change.weapon === 'twin'
+                  ? <span className="appearance-editor__paired-blades"><img src={thumbnail} alt="" /><img src={thumbnail} alt="" /></span>
+                  : <img src={thumbnail} alt="" />
+                  : tab === 'outfit' ? <Shirt size={24} /> : <Shield size={24} />}
+              </span>
+              <span className="appearance-editor__choice-copy"><strong>{label}</strong>
+                {!locked && (change.weapon === 'crystal'
+                  ? <small>Надевается со звёздным доспехом</small>
+                  : !next && <small>Нет портрета для этого сочетания</small>)}
+              </span>
+              {locked ? <em><LockKeyhole size={14} aria-hidden="true" /> Ур. {item.level}</em> : selected && <Check className="appearance-editor__selected-icon" size={17} aria-hidden="true" />}
+            </button>
+          })}
+        </div>
+        <fieldset className="field appearance-editor__presets">
+          <legend>Готовые сочетания</legend>
+          <div className="appearance-editor__small-options">{equipmentSets.filter(set => set.level <= level).map(set =>
+            <button type="button" key={set.id} aria-pressed={current.outfit === set.outfit && current.weapon === set.weapon}
+              onClick={() => setCharacter({ ...character, outfit: set.outfit, weapon: set.weapon })}>{set.label}</button>
+          )}</div>
+        </fieldset>
+      </div>
+
+      <div className="appearance-editor__footer"><button className="button button--secondary" onClick={onClose}>Отмена</button><button className="button button--primary" onClick={save}>Сохранить</button></div>
+    </div>
+  </Modal>
+}
+
+function PetEditor({ level, onClose }: { level: number; onClose: () => void }) {
+  const { state, updateProfile } = useStore()
+  const [name, setName] = useState(state.profile.petName ?? 'Искра')
+  const character = normalizeCharacter(state.profile.character)
+  const [choice, setChoice] = useState<CharacterAppearance['pet']>()
+  const pet = choice ?? availableCharacter(character, level).pet
+  const options = characterOptionsForGender(character.gender).pet
+  const save = () => {
+    updateProfile({ petName: name.trim() || 'Искра', ...(choice && { character: { ...character, pet: choice } }) })
+    onClose()
+  }
+  return <Modal title="Настройки питомца" onClose={onClose} wide>
+    <div className="appearance-editor">
+      <div className="appearance-editor__preview appearance-editor__preview--pet"><CompanionPortrait species={pet} level={level} /></div>
+      <div className="appearance-editor__controls">
+        <label className="field"><span>Имя питомца</span><input maxLength={32} value={name} onChange={event => setName(event.target.value)} /></label>
+        <div className="appearance-editor__choices" role="group" aria-label="Выбор питомца">{options.map(item => {
+          const locked = item.level > level
+          const selected = pet === item.id
+          return <button type="button" key={item.id} disabled={locked} aria-pressed={selected} className={`appearance-editor__choice ${selected ? 'is-selected' : ''} ${locked ? 'is-locked' : ''}`} onClick={() => setChoice(item.id)}>
+            <span className="appearance-editor__equipment-thumbnail"><CompanionPortrait species={item.id} level={Math.max(item.level, level)} /></span>
+            <span className="appearance-editor__choice-copy"><strong>{item.label}</strong></span>
+            {locked ? <em><LockKeyhole size={14} aria-hidden="true" /> Ур. {item.level}</em> : selected && <Check size={17} aria-hidden="true" />}
+          </button>
+        })}</div>
+      </div>
+      <div className="appearance-editor__footer"><button className="button button--secondary" onClick={onClose}>Отмена</button><button className="button button--primary" onClick={save}>Сохранить</button></div>
     </div>
   </Modal>
 }
@@ -183,8 +224,8 @@ function roadmapEntries(gender: CharacterAppearance['gender']) {
   const options = characterOptionsForGender(gender)
   const entries = [
     { key: 'start', level: 1, title: 'Начало пути · Лисёнок', kind: 'Герой и питомец' },
-    ...options.accent.filter((item) => item.level > 1).map((item) => ({ key: `accent-${item.id}`, level: item.level, title: item.label, kind: 'Цвет' })),
-    ...equipmentSets.filter((item) => item.level > 1).map((item) => ({ key: `equipment-${item.id}`, level: item.level, title: item.id === 'crystal' ? item.label : options.outfit.find((option) => option.id === item.outfit)?.label ?? item.label, kind: 'Комплект' })),
+    ...options.outfit.filter(item => item.level > 1).map(item => ({ key: `outfit-${item.id}`, level: item.level, title: item.label, kind: 'Образ' })),
+    ...options.weapon.filter(item => item.level > 1).map(item => ({ key: `weapon-${item.id}`, level: item.level, title: item.label, kind: 'Оружие' })),
     ...options.pet.filter((item) => item.level > 1).map((item) => ({ key: `pet-${item.id}`, level: item.level, title: item.label, kind: 'Питомец' })),
     ...heroStages.filter((item) => item.level > 1).map((item) => ({ key: `stage-${item.id}`, level: item.level, title: heroStageForGender(item.level, gender).label, kind: 'Этап героя' })),
     ...petStages.filter((item) => item.level > 1 && item.level < 100).map((item) => ({ key: `pet-stage-${item.level}`, level: item.level, title: `Спутник: ${petStageForLevel(item.level).label}`, kind: 'Развитие питомца' })),
@@ -193,7 +234,7 @@ function roadmapEntries(gender: CharacterAppearance['gender']) {
 }
 
 function UnlockIcon({ kind }: { kind: string }) {
-  const Icon = kind === 'Комплект' ? Shirt : kind === 'Цвет' ? Palette : kind === 'Питомец' || kind === 'Развитие питомца' ? PawPrint : Sparkles
+  const Icon = kind === 'Образ' ? Shirt : kind === 'Оружие' ? Shield : kind === 'Питомец' || kind === 'Развитие питомца' ? PawPrint : Sparkles
   return <Icon size={18} aria-hidden="true" />
 }
 

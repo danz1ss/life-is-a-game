@@ -1,10 +1,51 @@
-import { availableCharacter, heroStageForLevel } from './character'
+import { availableCharacter, characterOptions, heroStageForLevel, heroStages } from './character'
 import type { CharacterAppearance } from './types'
 import { equipmentSets } from './equipmentSets'
 import { heroArtworkFiles } from './heroArtwork'
 export { equipmentSets, type EquipmentSet } from './equipmentSets'
 
 const artwork = new Set(heroArtworkFiles)
+
+export function exactHeroArt(character: CharacterAppearance, level: number) {
+  const stage = heroStageForLevel(level)
+  const { gender, outfit, weapon } = character
+  if (outfit === 'casual' && weapon === 'none') return `heroes/${gender}-${stage.id}.png`
+  if ((outfit === 'celestial' || outfit === 'casual') && weapon === 'crystal' && stage.id === 'legend') {
+    return `heroes/${gender}-legend-crystal.png`
+  }
+  const file = `heroes/equipment/${gender}-${stage.id}-${outfit}-${weapon}.png`
+  if (artwork.has(file)) return file
+  // Keep a complete earlier illustration when a pairing has no art for this stage.
+  for (let index = heroStages.length - 1; index >= 0; index--) {
+    const earlier = heroStages[index]
+    if (earlier.level >= stage.level) continue
+    const previous = `heroes/equipment/${gender}-${earlier.id}-${outfit}-${weapon}.png`
+    if (artwork.has(previous)) return previous
+  }
+}
+
+export function heroEquipmentPortrait(character: CharacterAppearance, level: number) {
+  const exact = exactHeroArt(character, level)
+  if (exact) return exact
+  if (character.weapon !== 'none') return undefined
+  const mature = `heroes/equipment/${character.gender}-legend-${character.outfit}-none.png`
+  if (artwork.has(mature)) return mature
+}
+
+export function tryHeroEquipment(
+  appearance: CharacterAppearance,
+  change: Partial<Pick<CharacterAppearance, 'outfit' | 'weapon'>>,
+  level: number,
+) {
+  const next = { ...appearance, ...change }
+  if (change.weapon === 'crystal' && change.outfit === undefined) {
+    next.outfit = 'celestial'
+  }
+  if (!characterOptions.outfit.some(item => item.id === next.outfit && item.level <= level)
+    || !characterOptions.weapon.some(item => item.id === next.weapon && item.level <= level)
+    || !heroEquipmentPortrait(next, level)) return
+  return next
+}
 
 export function equipmentArtFile(setId: string, gender: CharacterAppearance['gender'], level: number) {
   const set = equipmentSets.find(item => item.id === setId)
@@ -45,6 +86,11 @@ export function stageOutfitLabel(level: number, gender: CharacterAppearance['gen
 export function renderedOutfitLabel(appearance: CharacterAppearance | undefined, level: number) {
   const character = availableCharacter(appearance, level)
   const set = equipmentForAppearance(character, level)
+  if (character.outfit !== 'casual' && set?.id !== 'crystal'
+    && (!set || !hasEquipmentArt(set.id, character.gender, level))
+    && heroEquipmentPortrait({ ...character, weapon: 'none' }, level)) {
+    return characterOptions.outfit.find(item => item.id === character.outfit)?.label ?? stageOutfitLabel(level, character.gender)
+  }
   return set && set.id !== 'casual' && hasEquipmentArt(set.id, character.gender, level)
     ? set.label : stageOutfitLabel(level, character.gender)
 }

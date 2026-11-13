@@ -7,7 +7,7 @@ import { Modal } from './Ui'
 import { HeroEvolution } from './HeroEvolution'
 import { evolutionBetween } from '../lib/characterVisual'
 
-export function LevelUpModal() {
+export function LevelUpModal({ onTryEquipment }: { onTryEquipment: () => void }) {
   const { state, acknowledgeLevelRewards } = useStore()
   const { highestLevel, acknowledgedLevel, personal } = state.levelRewards
   if (highestLevel <= acknowledgedLevel) return null
@@ -20,9 +20,10 @@ export function LevelUpModal() {
       {evolution.changed ? <HeroEvolution key={`${acknowledgedLevel}-${highestLevel}-${state.profile.character?.gender}`} fromLevel={acknowledgedLevel} toLevel={highestLevel} appearance={state.profile.character} />
         : <div className="level-up__medal"><Trophy size={36} /><strong>{highestLevel}</strong></div>}
       {badges > 0 && <p>Новых памятных значков: {badges}. Они сохранены в профиле.</p>}
-      {newLooks.length > 0 && <div className="level-unlocked"><strong>Новые образы и этапы</strong>{newLooks.map((item) => <span key={`${item.level}-${item.title}`}>{item.kind === 'pet' ? <PawPrint size={15} /> : <Sparkles size={15} />} {item.level} уровень · {item.title}</span>)}<small>Они доступны во вкладке «Прогресс».</small></div>}
+      {newLooks.length > 0 && <div className="level-unlocked"><strong>Новые открытия</strong>{newLooks.map((item) => <span key={`${item.level}-${item.title}`}>{item.kind === 'pet' ? <PawPrint size={15} /> : <Sparkles size={15} />} {item.level} уровень · {item.title}</span>)}</div>}
       {unlocked.length > 0 && <div className="level-unlocked"><strong>Открылись личные поощрения</strong>{unlocked.map((reward) => <span key={reward.id}><Gift size={15} /> {reward.title}</span>)}<small>Заберите их в разделе развития во вкладке «Прогресс».</small></div>}
       <button className="button button--primary" onClick={acknowledgeLevelRewards}>Продолжить приключение</button>
+      {newLooks.some(item => item.kind === 'hero') && <button className="button button--secondary" onClick={() => { acknowledgeLevelRewards(); onTryEquipment() }}>Примерить</button>}
     </div>
   </Modal>
 }

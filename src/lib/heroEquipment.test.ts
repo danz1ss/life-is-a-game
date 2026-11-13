@@ -1,8 +1,41 @@
 import { describe, expect, it } from 'vitest'
-import { characterMilestones, defaultCharacter, heroStages } from './character'
-import { equipmentArtFile, equipmentForAppearance, equipmentSets, hasEquipmentArt, renderedOutfitLabel, selectEquipment } from './heroEquipment'
+import { characterMilestones, characterOptions, defaultCharacter, heroStages } from './character'
+import { equipmentArtFile, equipmentForAppearance, equipmentSets, exactHeroArt, hasEquipmentArt, heroEquipmentPortrait, renderedOutfitLabel, selectEquipment, tryHeroEquipment } from './heroEquipment'
 
 const actualArtwork = import.meta.glob('/public/heroes/equipment/*.png')
+it('offers every ordinary weapon for each level-100 outfit', () => {
+  for (const gender of ['boy', 'girl'] as const) {
+    for (const { id: outfit } of characterOptions.outfit) {
+      for (const { id: weapon } of characterOptions.weapon.filter(item => item.id !== 'crystal')) {
+        const appearance = { ...defaultCharacter, gender, outfit }
+        const selected = tryHeroEquipment(appearance, { weapon }, 100)
+        expect(selected, `${gender} / ${outfit} / ${weapon}`).toEqual({ ...appearance, weapon })
+        if (outfit === 'casual' && weapon === 'none') continue
+        const path = `heroes/equipment/${gender}-legend-${outfit}-${weapon}.png`
+        expect(heroEquipmentPortrait(selected!, 100)).toBe(path)
+        expect(`/public/${path}` in actualArtwork).toBe(true)
+      }
+    }
+  }
+})
+it('equips the final crystal portrait directly from the weapon list', () => {
+  for (const gender of ['boy', 'girl'] as const) {
+    const ranger = { ...defaultCharacter, gender, outfit: 'ranger' } as const
+    expect(tryHeroEquipment(ranger, { weapon: 'crystal' }, 99)).toBeUndefined()
+    const equipped = tryHeroEquipment(ranger, { weapon: 'crystal' }, 100)
+    expect(equipped).toEqual({ ...ranger, outfit: 'celestial', weapon: 'crystal' })
+    expect(heroEquipmentPortrait(equipped!, 100)).toBe(`heroes/${gender}-legend-crystal.png`)
+  }
+})
+it('uses separate final-stage portraits for the requested equipment', () => {
+  for (const gender of ['boy', 'girl'] as const) {
+    for (const [outfit, weapon] of [['champion', 'shield'], ['champion', 'staff'], ['mage', 'twin'], ['guardian', 'twin']] as const) {
+      const appearance = { ...defaultCharacter, gender, outfit, weapon }
+      expect(heroEquipmentPortrait(appearance, 100)).toBe(`heroes/equipment/${gender}-legend-${outfit}-${weapon}.png`)
+      expect(tryHeroEquipment(appearance, { weapon }, 100)).toEqual(appearance)
+    }
+  }
+})
 
 describe('complete illustrated equipment sets', () => {
   it('announces the same complete sets at their actual unlock levels', () => {
@@ -44,4 +77,24 @@ describe('complete illustrated equipment sets', () => {
     expect(renderedOutfitLabel({ ...defaultCharacter, outfit: 'mage', weapon: 'staff' }, 8)).toContain('Маг')
     expect(renderedOutfitLabel({ ...defaultCharacter, outfit: 'mage', weapon: 'sword' }, 1)).toBe('Куртка новичка')
   })
+})
+it('changes one equipment slot while retaining the other', () => {
+  const mage = { ...defaultCharacter, outfit: 'mage', weapon: 'staff' } as const
+  const shield = tryHeroEquipment(mage, { weapon: 'shield' }, 8)
+  expect(shield).toMatchObject({ outfit: 'mage', weapon: 'shield' })
+  expect(tryHeroEquipment(shield!, { outfit: 'guardian' }, 8)).toMatchObject({ outfit: 'guardian', weapon: 'shield' })
+  expect(tryHeroEquipment(mage, { weapon: 'crystal' }, 8)).toBeUndefined()
+})
+it('has every illustrated mage and guardian pairing for both heroes', () => {
+  for (const gender of ['boy', 'girl'] as const) {
+    for (const outfit of ['mage', 'guardian'] as const) {
+      for (const weapon of ['none', 'shield', 'staff'] as const) {
+        const appearance = { ...defaultCharacter, gender, outfit, weapon }
+        const file = exactHeroArt(appearance, 8)
+        expect(file).toBe(`heroes/equipment/${gender}-child-${outfit}-${weapon}.png`)
+        expect(`/public/${file}` in actualArtwork).toBe(true)
+        expect(tryHeroEquipment(appearance, {}, 10)).toEqual(appearance)
+      }
+    }
+  }
 })

@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { defaultCharacter, heroStages } from './character'
 import { companionArt, companionArtFile, evolutionBetween, heroArtFile, stageOutfitLabel } from './characterVisual'
 
-const artwork = { ...import.meta.glob('/public/heroes/*.png'), ...import.meta.glob('/public/companions/*.png') }
+const artwork = { ...import.meta.glob('/public/heroes/**/*.png'), ...import.meta.glob('/public/companions/*.png') }
 const exists = (file: string) => `/public/${file}` in artwork
 
 describe('existing artwork progression', () => {

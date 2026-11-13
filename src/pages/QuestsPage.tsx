@@ -61,7 +61,7 @@ export function QuestsPage({ onNavigate, focusTomorrow = 0 }: { onNavigate: (pag
   const tomorrowQuests = tomorrowAll.filter((quest) => filteredIds.has(quest.id))
   const recurring = filtered.filter((quest) => !quest.archivedAt && quest.repeatDays.length > 0).sort(compareQuestTime)
   const archived = filtered.filter((quest) => Boolean(quest.archivedAt) || (quest.repeatDays.length === 0 && quest.completedDates.length > 0))
-  const archiveGroups = groupArchivedQuests(archived, state.history).map(group => ({ ...group, quests: [...group.quests].sort(compareQuestTime) }))
+  const archiveGroups = groupArchivedQuests(archived, state.history, today).map(group => ({ ...group, quests: [...group.quests].sort(compareQuestTime) }))
 
   const moveOverdue = (quest: Quest, when: 'today' | 'tomorrow') => {
     const currentDay = dateKey()
@@ -108,7 +108,7 @@ export function QuestsPage({ onNavigate, focusTomorrow = 0 }: { onNavigate: (pag
       <div className="segmented segmented--large">
         <button className={view === 'plan' ? 'is-active' : ''} onClick={() => setView('plan')}>План</button>
         <button className={view === 'recurring' ? 'is-active' : ''} onClick={() => setView('recurring')}>Повторяющиеся <em>{recurring.length}</em></button>
-        <button className={view === 'archive' ? 'is-active' : ''} onClick={() => setView('archive')}>Архив <em>{archived.length}</em></button>
+        <button className={view === 'archive' ? 'is-active' : ''} onClick={() => setView('archive')}>Архив <em>{archiveGroups.reduce((count, group) => count + group.quests.length, 0)}</em></button>
       </div>
       <label className="search-field"><Search size={16} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Найти квест" /></label>
       <label className="select-field"><Filter size={15} /><select value={skillFilter} onChange={(event) => setSkillFilter(event.target.value)}><option value="">Все навыки</option>{state.skills.map((skill) => <option value={skill.id} key={skill.id}>{skill.name}</option>)}</select></label>
@@ -160,8 +160,8 @@ export function QuestsPage({ onNavigate, focusTomorrow = 0 }: { onNavigate: (pag
     </section>}
 
     {view === 'archive' && <section className="quests-board panel">
-      <div className="quests-board__head"><span><Archive size={15} /> Архив</span><small>Завершённые и архивированные квесты</small></div>
-      {archiveGroups.length === 0 ? <EmptyState icon="◇" title="Архив пуст" text="Здесь появятся завершённые и отменённые квесты." /> : <div className="archive-groups">{archiveGroups.map((group) => <section className="archive-group" key={group.date}>
+      <div className="quests-board__head"><span><Archive size={15} /> Архив</span><small>Последние 30 дней</small></div>
+      {archiveGroups.length === 0 ? <EmptyState icon="◇" title="Архив пуст" text="За последние 30 дней здесь нет завершённых или отменённых квестов." /> : <div className="archive-groups">{archiveGroups.map((group) => <section className="archive-group" key={group.date}>
         <h2>{archiveDateFormat.format(new Date(`${group.date}T12:00:00`))}</h2>
         <div className="quest-list quest-list--roomy">{group.quests.map((quest) => questCard(quest, archiveBadgeForQuest(quest), quest.archivedAt && quest.completedDates.length === 0 ? <div className="overdue-actions"><button className="mini-action" onClick={() => restoreQuest(quest.id)}><RotateCcw size={12} /> Вернуть на сегодня</button></div> : undefined, quest.repeatDays.length === 0 && quest.completedDates.length > 0))}</div>
       </section>)}</div>}

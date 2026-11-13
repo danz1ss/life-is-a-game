@@ -3,6 +3,15 @@ import { createInitialState } from './game'
 import { groupArchivedQuests } from './questArchive'
 
 describe('quest archive', () => {
+  it('shows exactly 30 calendar days including today when a date is supplied', () => {
+    const [quest] = createInitialState().quests
+    const quests = ['2026-10-14', '2026-10-15', '2026-11-13', '2026-11-14'].map(date =>
+      ({ ...quest, id: date, completedDates: [date] }),
+    )
+    expect(groupArchivedQuests(quests, [], '2026-11-13').map(group => group.date))
+      .toEqual(['2026-11-13', '2026-10-15'])
+  })
+
   it('groups by result day, newest first, rather than quest order', () => {
     const state = createInitialState()
     state.quests = [

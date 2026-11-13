@@ -22,11 +22,8 @@ describe('full-body hero art', () => {
       const portrait = renderToStaticMarkup(createElement(CharacterPortrait, {
         appearance: { ...defaultCharacter, weapon }, level: 50,
       }))
-      expect(portrait).not.toContain('translate(740 698)')
-      expect(portrait).not.toContain('translate(744 780)')
-      expect(portrait).not.toContain('translate(685 766)')
-      expect(portrait).not.toContain('M803 331 L762 1299')
-      expect(portrait).not.toContain('M822 267 Q983 749 804 1247')
+      expect(portrait.match(/<image /g)).toHaveLength(1)
+      expect(portrait).not.toContain('/weapons/')
     }
   })
   it('selects all six illustrated stages for both hero genders', () => {
@@ -40,7 +37,7 @@ describe('full-body hero art', () => {
     }
   })
 
-  it('starts without a weapon and uses the illustrated crystal sword only at the final level', () => {
+  it('keeps the chosen clothing when the crystal sword unlocks at the final level', () => {
     const girl = { ...defaultCharacter, gender: 'girl' as const }
     const child = renderToStaticMarkup(createElement(CharacterPortrait, { appearance: girl, level: 1 }))
     expect(child).toContain('girl-child.png')
@@ -50,6 +47,7 @@ describe('full-body hero art', () => {
       appearance: { ...girl, weapon: 'crystal' }, level: 100,
     }))
     expect(finalHero).toContain('girl-legend-crystal.png')
+    expect(finalHero.match(/<image /g)).toHaveLength(1)
     expect(finalHero).not.toContain('girl-child.png')
   })
 

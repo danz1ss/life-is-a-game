@@ -204,7 +204,7 @@ export const characterMilestones = [
   { level: 30, kind: 'pet', title: 'Спутник-хранитель', detail: 'Четвёртая стадия питомца' },
   { level: 50, kind: 'pet', title: 'Мифический спутник', detail: 'Пятая стадия питомца' },
   { level: 50, kind: 'hero', title: 'Взрослый герой', detail: 'Новый возрастной образ героя' },
-  { level: 75, kind: 'hero', title: 'Опытный герой', detail: 'Зрелый образ и золотое сияние' },
+  { level: 75, kind: 'hero', title: 'Опытный герой', detail: 'Новый возрастной образ героя' },
   { level: 100, kind: 'pet', title: 'Дракончик', detail: 'Новый спутник и финальная стадия питомца' },
   { level: 100, kind: 'hero', title: 'Кристальный меч', detail: 'Зрелый герой получает легендарное оружие' },
 ].sort((a, b) => a.level - b.level)

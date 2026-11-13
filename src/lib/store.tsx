@@ -117,9 +117,11 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     setLoadError(null)
     loadPersistedState()
       .then(async (stored) => {
-        const next = stored === null
-          ? demoMode ? (await import('./demoState')).createDemoState() : createInitialState()
-          : migrateState(stored)
+        let next = stored === null ? createInitialState() : migrateState(stored)
+        if (demoMode) {
+          const { createDemoState, unlockDemoProgress } = await import('./demoState')
+          next = unlockDemoProgress(stored === null ? createDemoState() : next)
+        }
         if (!active) return
         setState(next)
         setSaveStatus('saved')
