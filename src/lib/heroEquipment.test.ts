@@ -3,6 +3,34 @@ import { characterMilestones, characterOptions, defaultCharacter, heroStages } f
 import { equipmentArtFile, equipmentForAppearance, equipmentSets, exactHeroArt, hasEquipmentArt, heroEquipmentPortrait, renderedOutfitLabel, selectEquipment, tryHeroEquipment } from './heroEquipment'
 
 const actualArtwork = import.meta.glob('/public/heroes/equipment/*.png')
+const allHeroArtwork = import.meta.glob('/public/heroes/**/*.png')
+
+it('lets both heroes wear every unlocked ordinary outfit and weapon together', () => {
+  for (const gender of ['boy', 'girl'] as const) {
+    for (let level = 1; level <= 100; level++) {
+      for (const { id: outfit } of characterOptions.outfit.filter(item => item.level <= level)) {
+        for (const { id: weapon } of characterOptions.weapon.filter(item => item.id !== 'crystal' && item.level <= level)) {
+          const appearance = { ...defaultCharacter, gender, outfit, weapon }
+          const pairing = `${gender} / level ${level} / ${outfit} / ${weapon}`
+          expect(tryHeroEquipment({ ...appearance, outfit: 'casual' }, { outfit }, level), pairing).toEqual(appearance)
+          expect(tryHeroEquipment({ ...appearance, weapon: 'none' }, { weapon }, level), pairing).toEqual(appearance)
+          const portrait = heroEquipmentPortrait(appearance, level)
+          expect(`/public/${portrait}` in allHeroArtwork, pairing).toBe(true)
+          if (outfit !== 'casual' || weapon !== 'none') {
+            expect(portrait, pairing).toMatch(new RegExp(`^heroes/equipment/${gender}-[^-]+-${outfit}-${weapon}\\.png$`))
+          }
+        }
+      }
+    }
+  }
+})
+
+it('lets the hero change outfits after equipping the crystal sword', () => {
+  const crystal = { ...defaultCharacter, gender: 'girl', outfit: 'celestial', weapon: 'crystal' } as const
+  expect(tryHeroEquipment(crystal, { outfit: 'traveler' }, 100)).toEqual({ ...crystal, outfit: 'traveler' })
+  expect(tryHeroEquipment(crystal, { outfit: 'ranger' }, 100)).toEqual({ ...crystal, outfit: 'ranger', weapon: 'none' })
+})
+
 it('offers every ordinary weapon for each level-100 outfit', () => {
   for (const gender of ['boy', 'girl'] as const) {
     for (const { id: outfit } of characterOptions.outfit) {

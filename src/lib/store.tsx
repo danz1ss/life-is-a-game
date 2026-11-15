@@ -3,6 +3,7 @@ import { createInitialState, dateKey, difficultyConfig, goalCompletionReward, is
 import type { AppState, DeletedWeeklyTask, Profile, Quest, QuestDraft, Reward, RewardDraft, Skill, SkillDraft, SkillGoal, SkillGoalDraft } from './types'
 import { removeQuest, restoreDeletedQuest } from './questDeletion'
 import { updateSkillColors } from './skillColors'
+import { withFocusSkills } from './skillFocus'
 import type { BackgroundTheme } from './appearance'
 import { nextSkillPosition } from './treeLayout'
 import { createStateSaver, type SaveStatus } from './stateSaver'
@@ -308,31 +309,25 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       const id = uuid()
       setState((current) => {
         if (!current) return current
-        return {
-          ...current,
-          skills: [...current.skills, {
-            ...draft,
-            id,
-            xp: 0,
-            position: draft.position ?? nextSkillPosition(current.skills, draft.parentId),
-            createdAt: new Date().toISOString(),
-          }],
-        }
+        return withFocusSkills(current, [...current.skills, {
+          ...draft,
+          id,
+          xp: 0,
+          position: draft.position ?? nextSkillPosition(current.skills, draft.parentId),
+          createdAt: new Date().toISOString(),
+        }])
       })
       return id
     }
 
     const updateSkill = (id: string, patch: Partial<Skill>) => {
-      setState((current) => current && ({
-        ...current,
-        skills: updateSkillColors(current.skills, id, patch),
-      }))
+      setState((current) => current && withFocusSkills(current, updateSkillColors(current.skills, id, patch)))
     }
 
     const deleteSkill = (id: string) => {
       setState((current) => current && ({
-        ...current,
-        skills: current.skills.filter((skill) => skill.id !== id).map((skill) => skill.parentId === id ? { ...skill, parentId: null } : skill),
+        ...withFocusSkills(current, current.skills.filter((skill) => skill.id !== id)
+          .map((skill) => skill.parentId === id ? { ...skill, parentId: null } : skill)),
         quests: current.quests.map((quest) => quest.skillId === id ? { ...quest, skillId: null } : quest),
         goals: current.goals.filter((goal) => goal.skillId !== id),
       }))

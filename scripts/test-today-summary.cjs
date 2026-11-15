@@ -23,7 +23,8 @@ module.exports=async({window,evaluate,waitFor,navigate})=>{
     const capture=full.crop({x:Math.round(rect.x*scale),y:Math.round(rect.y*scale),width:Math.min(full.getSize().width-Math.round(rect.x*scale),Math.round(rect.width*scale)),height:Math.min(full.getSize().height-Math.round(rect.y*scale),Math.round(rect.height*scale))})
     fs.writeFileSync(path.join(process.env.LIFE_GAME_SCREENSHOTS,name+'.png'),capture.toPNG())
   }
-  assert.match(await evaluate("document.querySelector('.g-summary-level').textContent"),/Уровень 1.*Малыш/)
+  assert.equal(await evaluate("document.querySelector('.g-summary-level strong').textContent"),'1')
+  assert.equal(await evaluate("document.querySelector('.g-character-rank').textContent"),'Малыш')
   assert.match(await evaluate("document.querySelector('.g-summary-xp').textContent"),/0 \/ 100 XP.*До уровня 2 — 100 XP/)
   assert.equal(await evaluate("document.querySelector('.g-header-actions .button--primary').textContent"),'Квест на сегодня')
   assert.equal(await evaluate("document.querySelector('.g-header-actions .button--primary .lucide-plus')!==null"),true)
@@ -76,8 +77,8 @@ module.exports=async({window,evaluate,waitFor,navigate})=>{
       for(const width of [1440,390]){
         window.setMinimumSize(360,600);window.setContentSize(width,1000)
         await evaluate("new Promise(resolve=>setTimeout(resolve,60))")
-        await evaluate("document.querySelector('.g-summary-level > span').textContent='Очень длинное название этапа развития героя'")
-        assert.equal(await evaluate("[...document.querySelectorAll('.g-hero-summary,.g-summary-level,.g-summary-xp,.g-wallet,.g-header-actions')].every(element=>element.scrollWidth<=element.clientWidth)"),true)
+        await evaluate("document.querySelector('.g-character-rank').textContent='Очень длинное название этапа развития героя'")
+        assert.equal(await evaluate("[...document.querySelectorAll('.g-character-heading,.g-hero-summary,.g-summary-level,.g-summary-xp,.g-wallet,.g-header-actions')].every(element=>element.scrollWidth<=element.clientWidth)"),true)
       }
     }
   }

@@ -21,13 +21,5 @@ export function CompanionPortrait({ species = 'fox', level = 1, className = '', 
     </defs>
     <ellipse cx="60" cy="68" rx="56" ry="50" fill={`url(#${id}-halo)`} />
     <image href={art} x="0" y="0" width="120" height="120" preserveAspectRatio="xMidYMid meet" />
-    {stage >= 2 && <g fill={color} opacity=".85">
-      <path d="M15 35l1.8 4.2L21 41l-4.2 1.8L15 47l-1.8-4.2L9 41l4.2-1.8z" />
-      <circle cx="104" cy="65" r="1.5" />
-    </g>}
-    {stage >= 4 && <g fill="#d8f9ff" opacity=".92">
-      <path d="M100 20l2 5 5 2-5 2-2 5-2-5-5-2 5-2z" />
-      <circle cx="22" cy="85" r="1.3" />
-    </g>}
   </svg>
 }

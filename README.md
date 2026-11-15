@@ -59,7 +59,7 @@
 Готовый установщик находится в папке `release`:
 
 ```text
-Life is a Game Setup 1.2.0.exe
+Life is a Game Setup 1.5.0.exe
 ```
 
 Для разработки:

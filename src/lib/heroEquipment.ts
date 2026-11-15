@@ -27,9 +27,15 @@ export function exactHeroArt(character: CharacterAppearance, level: number) {
 export function heroEquipmentPortrait(character: CharacterAppearance, level: number) {
   const exact = exactHeroArt(character, level)
   if (exact) return exact
-  if (character.weapon !== 'none') return undefined
-  const mature = `heroes/equipment/${character.gender}-legend-${character.outfit}-none.png`
-  if (artwork.has(mature)) return mature
+  // Equipment unlocks and portrait stages are independent. Use the first
+  // later illustration of the same pairing if there is no current or earlier one.
+  const { gender, outfit, weapon } = character
+  const stage = heroStageForLevel(level)
+  for (const later of heroStages) {
+    if (later.level <= stage.level) continue
+    const file = `heroes/equipment/${gender}-${later.id}-${outfit}-${weapon}.png`
+    if (artwork.has(file)) return file
+  }
 }
 
 export function tryHeroEquipment(
@@ -42,9 +48,12 @@ export function tryHeroEquipment(
     next.outfit = 'celestial'
   }
   if (!characterOptions.outfit.some(item => item.id === next.outfit && item.level <= level)
-    || !characterOptions.weapon.some(item => item.id === next.weapon && item.level <= level)
-    || !heroEquipmentPortrait(next, level)) return
-  return next
+    || !characterOptions.weapon.some(item => item.id === next.weapon && item.level <= level)) return
+  if (heroEquipmentPortrait(next, level)) return next
+  if (change.outfit !== undefined && change.weapon === undefined && next.weapon === 'crystal') {
+    const unarmed = { ...next, weapon: 'none' as const }
+    if (heroEquipmentPortrait(unarmed, level)) return unarmed
+  }
 }
 
 export function equipmentArtFile(setId: string, gender: CharacterAppearance['gender'], level: number) {

@@ -83,7 +83,6 @@ export function ProgressPage({ tryEquipment, onEquipmentOpened }: { tryEquipment
       <h2 id="progress-hero-title" className="progress-section-title">Герой</h2>
       <div className="panel progress-hero">
         <div className="progress-hero__visual">
-          <div className="progress-hero__brand"><strong>YDN</strong><span>Герой и спутник</span></div>
           <div className="progress-hero__scene"><div className="character-podium" aria-hidden="true" /><CharacterStage appearance={character} level={level} className="progress-hero__stage" /></div>
         </div>
         <div className="progress-hero__details">

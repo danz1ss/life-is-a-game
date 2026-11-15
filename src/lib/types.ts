@@ -21,6 +21,7 @@ export interface Profile {
   totalXp: number
   gold: number
   activeDays: string[]
+  focusSkillId?: string | null
 }
 
 export interface Skill {
@@ -30,6 +31,7 @@ export interface Skill {
   icon: string
   color: string
   parentId: string | null
+  isArea?: boolean
   xp: number
   position: { x: number; y: number }
   requiredParentLevel: number

@@ -76,17 +76,48 @@ module.exports = async ({ scenario, window, evaluate, waitFor, navigate }) => {
     await choose(gender === 'boy' ? 'Посох мага' : 'Посох волшебницы', `${gender}-child-guardian-staff.png`)
     await close(false)
     assert.match(await art('.progress-hero'), new RegExp(`${gender}-child-mage-staff.png$`))
+
+    await open()
+    await choose(gender === 'boy' ? 'Куртка новичка' : 'Наряд новичка', '-casual-staff.png')
+    await choose(gender === 'boy' ? 'Куртка путника' : 'Куртка путешественницы', '-traveler-staff.png')
+    await click('.appearance-editor__tabs button', 'Оружие')
+    await choose(gender === 'boy' ? 'Меч героя' : 'Меч героини', '-traveler-sword.png')
+    await close(true)
+    await reload()
+    assert.match(await art('.progress-hero'), new RegExp(`${gender}-.*-traveler-sword.png$`))
   }
 
   await seed('girl', 100, { outfit: 'mage', weapon: 'staff' })
+  const buttonLayout = await evaluate(`[...document.querySelectorAll('.progress-hero__actions button')].map(button => {
+    const box = button.getBoundingClientRect()
+    return [Math.round(box.width), Math.round(box.height), Math.round(box.top + box.height / 2)]
+  })`)
+  assert.deepEqual(buttonLayout.map(([width, height]) => [width, height]), [[224, 52], [179, 42]])
+  assert.equal(buttonLayout[0][2], buttonLayout[1][2])
+  assert.equal(await evaluate("document.querySelectorAll('.progress-hero__stage .companion-portrait :is(path, circle)').length"), 0)
+  await navigate(0, '.g-stage .companion-portrait image')
+  assert.equal(await evaluate("document.querySelectorAll('.g-stage .companion-portrait :is(path, circle)').length"), 0)
+  await navigate(3, '.progress-hero__actions')
   window.webContents.debugger.attach('1.3')
   await window.webContents.debugger.sendCommand('Emulation.setDeviceMetricsOverride', { width: 390, height: 900, deviceScaleFactor: 1, mobile: false })
   for (const kind of ['hero', 'pet']) {
     await open(kind)
     assert.equal(await evaluate('innerWidth'), 390)
     assert.equal(await evaluate("document.querySelector('.modal-card').scrollWidth <= document.querySelector('.modal-card').clientWidth"), true)
+    if (kind === 'hero') {
+      const spacing = await evaluate(`[...document.querySelectorAll('.appearance-editor fieldset > legend')].map(legend => {
+        const options = legend.nextElementSibling
+        return [Math.round(options.getBoundingClientRect().top - legend.getBoundingClientRect().bottom), getComputedStyle(options).rowGap]
+      })`)
+      assert.deepEqual(spacing, [[8, '8px'], [8, '8px'], [8, '8px']])
+    }
     await screenshot(`settings-${kind}-390`)
     if (kind === 'pet') {
+      for (const [label, file] of [['Лисёнок', 'fox'], ['Совёнок', 'owl'], ['Дракончик', 'dragon']]) {
+        await click('.appearance-editor__choices button', label)
+        await waitFor(`document.querySelector('.appearance-editor__preview image').getAttribute('href').includes('${file}')`)
+        assert.equal(await evaluate("document.querySelectorAll('.appearance-editor .companion-portrait :is(path, circle)').length"), 0)
+      }
       await click('.appearance-editor__choices button', 'Дракончик')
       await waitFor("document.querySelector('.appearance-editor__preview image').getAttribute('href').includes('dragon')")
     }

@@ -20,6 +20,42 @@ module.exports = async ({ window, evaluate, waitFor, navigate }) => {
   const loaded = new Promise(resolve => window.webContents.once('did-finish-load', resolve))
   window.reload(); await loaded
   await waitFor("document.querySelectorAll('.g-list .quest-card').length === 4")
+  const focusTrigger = '.g-skills-focus-trigger'
+  const openFocus = async () => {
+    await evaluate(`document.querySelector('${focusTrigger}').focus(); document.querySelector('${focusTrigger}').click()`)
+    await waitFor("Boolean(document.querySelector('.g-skills-picker'))")
+    assert.equal(await evaluate("Boolean(document.activeElement.closest('.g-skills-picker'))"), true)
+  }
+  const chooseFocus = async id => {
+    await openFocus()
+    await evaluate(`document.querySelector('[data-focus-id="${id}"]').click()`)
+    await waitFor(`document.querySelector('.g-skills-list').firstElementChild.matches('.g-skill-focus[data-skill-id="${id}"]')`)
+    assert.equal(await evaluate(`document.activeElement.matches('${focusTrigger}')`), true)
+  }
+  assert.deepEqual(await evaluate("[...document.querySelectorAll('.g-skills-list > li')].map(item => item.dataset.skillId)"), ['sport', 'reading', 'english', 'programming'])
+  await chooseFocus('reading')
+  await chooseFocus('programming')
+  await waitFor("window.lifeGame.loadState().then(state => state.profile.focusSkillId === 'programming')")
+  const focusReload = new Promise(resolve => window.webContents.once('did-finish-load', resolve))
+  window.reload(); await focusReload
+  await waitFor("document.querySelector('.g-skill-focus')?.dataset.skillId === 'programming'")
+  window.setMinimumSize(360, 600)
+  for (const width of [1440, 1024, 390]) {
+    window.setContentSize(width, 1400)
+    await waitFor(`innerWidth === ${width}`)
+    const layout = await evaluate(`{
+      const list = document.querySelector('.g-skills-list');
+      const card = list.firstElementChild;
+      const header = document.querySelector('.g-skills-header');
+      ({ fullWidth: card.clientWidth + 2 === list.clientWidth, headerFits: header.scrollWidth <= header.clientWidth });
+    }`)
+    assert.deepEqual(layout, { fullWidth: true, headerFits: true })
+  }
+  await openFocus()
+  assert.equal(await evaluate("document.querySelector('[data-focus-id=programming]').getAttribute('aria-pressed')"), 'true')
+  await evaluate("document.querySelector('.g-skills-focus-clear').click()")
+  await waitFor("!document.querySelector('.g-skill-focus')")
+  await waitFor("window.lifeGame.loadState().then(state => state.profile.focusSkillId === null)")
   const row = id => `.g-list [data-reorder-id="${id}"]`
   const click = async selector => evaluate(`document.querySelector(${JSON.stringify(selector)}).click()`)
   const main = row('today-main')

@@ -42,9 +42,11 @@ export function assertValidState(value: unknown): asserts value is AppState {
         pet: optional(oneOf('fox', 'owl', 'dragon')),
       })),
       petName: optional(string),
+      focusSkillId: optional(nullable(id)),
     }),
     skills: entities({
       name: string, description: string, icon: string, color: string, parentId: nullable(id), xp: nonnegative,
+      isArea: optional(oneOf(true, false)),
       position: object({ x: number, y: number }), requiredParentLevel: positive, createdAt: timestamp,
     }),
     quests: entities({

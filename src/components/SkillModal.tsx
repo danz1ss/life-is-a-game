@@ -20,6 +20,7 @@ export function SkillModal({ skill, skills, initialParentId = '', onSave, onClos
   const [icon, setIcon] = useState('✦')
   const [color, setColor] = useState(rootColors[0])
   const [parentId, setParentId] = useState('')
+  const [isArea, setIsArea] = useState(false)
   const [requiredParentLevel, setRequiredParentLevel] = useState(1)
   const [iconQuery, setIconQuery] = useState('')
   const [iconOpen, setIconOpen] = useState(false)
@@ -32,6 +33,7 @@ export function SkillModal({ skill, skills, initialParentId = '', onSave, onClos
     setIcon(skill?.icon ?? '✦')
     setColor(skill?.color ?? suggestSkillColor(initialParentId || null, skills))
     setParentId(skill?.parentId ?? initialParentId)
+    setIsArea(skill?.isArea ?? false)
     setRequiredParentLevel(skill?.requiredParentLevel ?? 1)
     setIconOpen(false)
     setIconQuery('')
@@ -53,7 +55,7 @@ export function SkillModal({ skill, skills, initialParentId = '', onSave, onClos
   const submit = (event: FormEvent) => {
     event.preventDefault()
     if (!name.trim()) return
-    onSave({ name: name.trim(), description: description.trim(), icon, color, parentId: parentId || null, requiredParentLevel })
+    onSave({ name: name.trim(), description: description.trim(), icon, color, parentId: parentId || null, isArea, requiredParentLevel })
   }
 
   return (
@@ -103,6 +105,13 @@ export function SkillModal({ skill, skills, initialParentId = '', onSave, onClos
           <span>Откроется на уровне родителя</span>
           <input type="number" min={1} max={50} value={requiredParentLevel} onChange={(event) => setRequiredParentLevel(Number(event.target.value))} />
         </label>
+        {parent && <label className="field field--full">
+          <span>Тип</span>
+          <select value={isArea ? 'area' : 'skill'} onChange={event => setIsArea(event.target.value === 'area')}>
+            <option value="skill">Навык</option>
+            <option value="area">Область</option>
+          </select>
+        </label>}
         <footer className="form-actions field--full">
           <button className="button button--ghost" type="button" onClick={onClose}>Отмена</button>
           <button className="button button--primary" type="submit">{skill ? 'Сохранить' : 'Добавить навык'}</button>

@@ -2,6 +2,7 @@ import type { AppState, Difficulty, Quest, Skill, SkillGoal } from './types'
 import { defaultSkillColors, migrateSkillColors } from './skillColors'
 import { normalizeBackground } from './appearance'
 import { assertValidState } from './stateValidation'
+import { withFocusSkills } from './skillFocus'
 
 export const goalCompletionReward = { xp: 150, gold: 30 }
 
@@ -138,7 +139,7 @@ export function createInitialState(): AppState {
       { id: 'growth', name: 'Развитие', description: 'Обучение и расширение кругозора', icon: '✦', color: '#9b8cff', parentId: null, xp: 0, position: { x: -80, y: 150 }, requiredParentLevel: 1, createdAt: now },
       { id: 'career', name: 'Карьера', description: 'Профессиональные навыки и проекты', icon: '◆', color: '#ffb45e', parentId: null, xp: 0, position: { x: 250, y: 150 }, requiredParentLevel: 1, createdAt: now },
       { id: 'sport', name: 'Спорт', description: 'Сила, выносливость и подвижность', icon: '⚡', color: '#53d6a1', parentId: 'health', xp: 0, position: { x: -500, y: 380 }, requiredParentLevel: 1, createdAt: now },
-      { id: 'sleep', name: 'Сон', description: 'Стабильный и качественный отдых', icon: '☾', color: '#53d6a1', parentId: 'health', xp: 0, position: { x: -300, y: 380 }, requiredParentLevel: 1, createdAt: now },
+      { id: 'sleep', name: 'Сон', description: 'Стабильный и качественный отдых', icon: '☾', color: '#53d6a1', parentId: 'health', isArea: true, xp: 0, position: { x: -300, y: 380 }, requiredParentLevel: 1, createdAt: now },
       { id: 'reading', name: 'Чтение', description: 'Книги и осмысленное обучение', icon: '▤', color: '#9b8cff', parentId: 'growth', xp: 0, position: { x: -120, y: 380 }, requiredParentLevel: 1, createdAt: now },
       { id: 'english', name: 'Английский', description: 'Разговорная речь и словарный запас', icon: 'A', color: '#9b8cff', parentId: 'growth', xp: 0, position: { x: 80, y: 380 }, requiredParentLevel: 1, createdAt: now },
       { id: 'programming', name: 'Программирование', description: 'Создание приложений и систем', icon: '</>', color: '#ffb45e', parentId: 'career', xp: 0, position: { x: 290, y: 380 }, requiredParentLevel: 1, createdAt: now },
@@ -217,5 +218,6 @@ export function migrateState(value: unknown): AppState {
   }
   assertValidState(migrated)
   if ((stored.version ?? 1) < 4) migrated.skills = migrateSkillColors(migrated.skills)
-  return migrated
+  return withFocusSkills(migrated, migrated.skills.map(skill =>
+    skill.id === 'sleep' && skill.isArea === undefined ? { ...skill, isArea: true } : skill))
 }

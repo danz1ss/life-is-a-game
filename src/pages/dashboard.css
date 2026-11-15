@@ -223,11 +223,10 @@
 .g-review p { margin: 0; color: var(--text-muted); font-size: 12px; line-height: 1.5; }
 .g-review .button { flex: none; }
 .g-character { padding-bottom: 8px; }
-.g-character-heading { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
-.g-character-brand { min-width: 0; }
-.g-character-brand .g-ydn-logo { display: block; color: #f2f7ff; font-size: 30px; font-weight: 850; line-height: 1; letter-spacing: -.055em; }
-.g-character-heading h2 { margin: 8px 0 0; color: #c7d9ea; font-size: 12px; line-height: 1.5; font-weight: 550; overflow-wrap: anywhere; }
-.g-character-heading h2 > span { color: #92a8bf; font-weight: 450; }
+.g-character-heading { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+.g-character-identity { min-width: 0; }
+.g-character-heading h2 { margin: 0 0 6px; color: #f2f7ff; font-size: 28px; line-height: 1.15; font-weight: 750; overflow-wrap: anywhere; }
+.g-character-rank { display: inline-block; padding: 4px 7px; border: 1px solid #405a78; border-radius: 6px; background: #26364a7d; color: #c7d9ea; font-size: 11px; line-height: 1.3; }
 .g-level-badge { display: flex; flex: none; align-items: center; gap: 8px; padding: 8px 12px; border: 1px solid #405a78; border-radius: 24px; background: #26364a7d; }
 .g-level-badge > span { color: #d4e2f2; font-size: 10px; font-weight: 650; text-transform: uppercase; letter-spacing: .08em; }
 .g-level-badge strong { color: #ffc477; font-size: 20px; line-height: 1.2; font-variant-numeric: tabular-nums; }
@@ -236,9 +235,9 @@
 .g-character-details { min-width: 0; container-type: inline-size; }
 .g-hero-summary { display: grid; grid-template-columns: minmax(76px, .65fr) minmax(0, 1.6fr) minmax(80px, .75fr); align-items: center; gap: 12px; padding: 16px 12px; border: 1px solid #37526c; border-radius: 16px; background: linear-gradient(145deg, #182c40dc, #101d2cdd); }
 .g-hero-summary > * { min-width: 0; }
-.g-summary-level { display: flex; flex-wrap: wrap; gap: 6px; align-items: baseline; line-height: 1.5; }
-.g-summary-level strong { font-size: 14px; color: var(--text); overflow-wrap: anywhere; }
-.g-summary-level > span { color: var(--text-secondary); font-size: 13px; overflow-wrap: anywhere; }
+.g-summary-level { display: grid; align-self: stretch; align-content: center; gap: 3px; padding-inline-end: 8px; border-inline-end: 1px solid #37526c; text-align: center; }
+.g-summary-level strong { font-size: 28px; line-height: 1; color: var(--text); overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
+.g-summary-level > span { color: var(--text-secondary); font-size: 12px; overflow-wrap: anywhere; }
 .g-summary-xp { min-width: 0; }
 .g-hero-summary .g-xp-heading { font-size: 13px; line-height: 1.5; }
 .g-hero-summary .g-xp-heading > span { overflow-wrap: anywhere; }
@@ -246,6 +245,7 @@
   .g-hero-summary { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
   .g-summary-xp { grid-column: 1 / -1; grid-row: 2; }
   .g-hero-summary .g-wallet { grid-column: 2; grid-row: 1; justify-self: end; }
+  .g-summary-level { padding-inline-end: 0; border-inline-end: 0; }
 }
 .g-stage { position: relative; width: 100%; aspect-ratio: 1 / 1.08; max-height: 470px; display: flex; justify-content: center; align-items: center; margin: 0; background: radial-gradient(ellipse 60% 65% at 44% 42%, #3f93ba1f, transparent 80%), radial-gradient(ellipse 80% 14% at 50% 91%, #75b1d022, transparent 85%); }
 .g-stage .character-stage { position: relative; z-index: 1; height: 100%; width: 100%; max-width: 100%; filter: drop-shadow(0 8px 8px #03091140); }

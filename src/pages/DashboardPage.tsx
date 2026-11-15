@@ -12,8 +12,9 @@ import { ReorderableQuestList } from '../components/dashboard/ReorderableQuestLi
 import { SkillsPanel } from '../components/dashboard/SkillsPanel'
 import { WeeklyChecklist } from '../components/dashboard/WeeklyChecklist'
 import { difficultyConfig, formatDuration, isQuestComplete, isQuestOverdue, isQuestSkipped, levelProgress, longDateLabel } from '../lib/game'
-import { characterMilestonesForGender, characterOptions, normalizeCharacter, petStageForLevel } from '../lib/character'
+import { characterMilestonesForGender, characterOptions, heroStageForGender, normalizeCharacter, petStageForLevel } from '../lib/character'
 import { questsForDay } from '../lib/planning'
+import { focusableSkills } from '../lib/skillFocus'
 import { useStore } from '../lib/store'
 import { resolveReviewWeek, reviewWeekLabel, reviewWeeks, shiftWeek, weekMonday, weeklyPlanError } from '../lib/weeklyPlanning'
 import type { Quest, QuestDraft, WeeklyPlan } from '../lib/types'
@@ -54,8 +55,7 @@ export function DashboardPage({ onNavigate, onOpenSkill }: { onNavigate: (page: 
   const readyGifts = state.levelRewards.personal.filter(item => !item.claimedAt && item.level <= highest)
   const petName = state.profile.petName?.trim() || 'Искра'
   const petLabel = characterOptions.pet.find(item => item.id === appearance.pet)?.label ?? 'Лисёнок'
-  const parentIds = new Set(state.skills.map(skill => skill.parentId).filter(Boolean))
-  const leafSkills = state.skills.filter(skill => !parentIds.has(skill.id))
+  const leafSkills = focusableSkills(state.skills)
   const mainSkill = state.skills.find(skill => skill.id === main?.skillId)
   const overdueCount = state.quests.filter(q => isQuestOverdue(q, today, Boolean(q.dueDate && state.dayPlans[q.dueDate]?.closed))).length
   const monday = weekMonday(today)
@@ -127,7 +127,10 @@ export function DashboardPage({ onNavigate, onOpenSkill }: { onNavigate: (page: 
           <section className="g-hero g-journey" aria-label="Герой и следующий уровень">
             <section className="g-character">
               <div className="g-character-heading">
-                <div className="g-character-brand"><span className="g-ydn-logo" aria-label="YDN">YDN</span><h2>{state.profile.name}<span> · Ваш герой</span></h2></div>
+                <div className="g-character-identity">
+                  <h2>{state.profile.name.trim() || 'Игрок'}</h2>
+                  <span className="g-character-rank">{heroStageForGender(highest, appearance.gender).label}</span>
+                </div>
                 <div className="g-level-badge"><span>Уровень</span><strong>{String(level.level).padStart(2, '0')}</strong></div>
               </div>
               <div className="g-character-body">
@@ -138,7 +141,7 @@ export function DashboardPage({ onNavigate, onOpenSkill }: { onNavigate: (page: 
                     <span className="g-companion-name">{petName} · {petLabel.toLocaleLowerCase('ru-RU')}</span>
                     <span className="g-companion-stage">Стадия питомца: <strong>{petStageForLevel(highest).label}</strong></span>
                   </div>
-                  <HeroSummary totalXp={state.profile.totalXp} highestLevel={highest} gold={state.profile.gold} gender={appearance.gender} onRewards={() => onNavigate('progress')} />
+                  <HeroSummary totalXp={state.profile.totalXp} gold={state.profile.gold} onRewards={() => onNavigate('progress')} />
                   {highest > level.level ? <p className="g-retained">Открыто до уровня {highest}. Награды сохранены.</p> : null}
                   <button type="button" className="button button--tertiary g-character-link" onClick={() => onNavigate('progress')}>Путь развития <ArrowRight size={15} aria-hidden="true" /></button>
                 </div>
@@ -151,7 +154,9 @@ export function DashboardPage({ onNavigate, onOpenSkill }: { onNavigate: (page: 
             </section>
             {readyGifts.map(gift => <div className="g-ready" key={gift.id}><Check size={17} aria-hidden="true" /><span>Доступен подарок: {gift.title}</span><button type="button" className="button button--ghost" onClick={() => store.claimPersonalLevelReward(gift.id)}>Получить</button></div>)}
           </section>
-          <SkillsPanel skills={leafSkills} onSelect={skill => onOpenSkill(skill.id)} onOpenTree={() => onNavigate('tree')} />
+          <SkillsPanel skills={leafSkills} focusSkillId={state.profile.focusSkillId}
+            onChangeFocus={focusSkillId => store.updateProfile({ focusSkillId })}
+            onSelect={skill => onOpenSkill(skill.id)} onOpenTree={() => onNavigate('tree')} />
         </aside>
       </div>
     </div>

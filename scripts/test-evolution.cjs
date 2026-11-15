@@ -28,7 +28,8 @@ module.exports = async ({ scenario, window, evaluate, waitFor, navigate }) => {
     const state = structuredClone(baseline)
     const n = to - 1
     state.profile.totalXp = n * 100 + 35 * n * (n - 1) / 2 - (pending ? 0 : 50)
-    state.profile.character = { gender, skin: 'medium', hair: 'short', outfit: 'mage', weapon: 'none', accent: 'azure', pet: 'fox' }
+    // Base clothing has a separate portrait at every age stage.
+    state.profile.character = { gender, skin: 'medium', hair: 'short', outfit: 'casual', weapon: 'none', accent: 'azure', pet: 'fox' }
     state.levelRewards.highestLevel = pending ? to : from
     state.levelRewards.acknowledgedLevel = from
     await evaluate(`window.lifeGame.saveState(${JSON.stringify(state)})`)
@@ -81,7 +82,7 @@ module.exports = async ({ scenario, window, evaluate, waitFor, navigate }) => {
     assert.equal(saved.profile.totalXp, before.profile.totalXp + 50)
     assert.equal(saved.profile.gold, before.profile.gold + 10)
     assert.equal(saved.profile.character.pet, 'fox')
-    assert.equal(saved.profile.character.outfit, 'mage')
+    assert.equal(saved.profile.character.outfit, 'casual')
     assert.equal(saved.levelRewards.acknowledgedLevel, to)
     await clickQuest(); await waitFor("!document.querySelector('.g-quest.is-main .quest-check[aria-pressed=true]')")
     await waitFor("Boolean(document.querySelector('.save-state--saved'))")
